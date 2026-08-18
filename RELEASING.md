@@ -1,15 +1,5 @@
 # Releasing
 
-## One-time setup
-
-Register this repository as a trusted publisher on PyPI so the publish
-workflow can upload without an API token:
-
-1. Go to <https://pypi.org/manage/account/publishing/> (or the project's
-   publishing settings once `skyportal-py` exists on PyPI).
-2. Add a publisher: owner `leonitousconforti`, repository `skyportal-py`,
-   workflow `python-publish.yml`, environment left blank.
-
 ## Cutting a release
 
 All commands run inside the nix dev shell (`nix develop`), which provides uv.
