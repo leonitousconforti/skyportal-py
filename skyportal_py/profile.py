@@ -13,7 +13,7 @@ from skyportal_py._http import unwrap
 class UserProfile(BaseModel):
     """The user associated with the API token."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     username: str
     first_name: str | None = None

@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class User(BaseModel):
-    """A SkyPortal user.
+    """A SkyPortal user."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     username: str
@@ -27,7 +23,7 @@ class User(BaseModel):
 class UsersPage(BaseModel):
     """One page of results from a users query."""
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     users: list[User]
     total_matches: int = Field(alias="totalMatches")

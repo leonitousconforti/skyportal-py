@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Candidate(BaseModel):
-    """A SkyPortal candidate.
+    """A SkyPortal candidate."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float | None = None
@@ -26,7 +22,7 @@ class Candidate(BaseModel):
 class CandidatesPage(BaseModel):
     """One page of results from a candidates query."""
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     candidates: list[Candidate]
     total_matches: int = Field(alias="totalMatches")
@@ -36,6 +32,8 @@ class CandidatesPage(BaseModel):
 
 class CandidatePost(BaseModel):
     """Payload for posting a new candidate."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float
@@ -47,7 +45,7 @@ class CandidatePost(BaseModel):
 class CandidatePostResponse(BaseModel):
     """Result of posting a new candidate."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list)
 

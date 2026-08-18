@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class ObservingRun(BaseModel):
-    """A classical observing run on an instrument.
+    """A classical observing run on an instrument."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     instrument_id: int
@@ -28,6 +24,8 @@ class ObservingRun(BaseModel):
 class ObservingRunPost(BaseModel):
     """Payload for creating an observing run."""
 
+    model_config = ConfigDict(extra="forbid")
+
     instrument_id: int
     calendar_date: str
     pi: str | None = None
@@ -39,7 +37,7 @@ class ObservingRunPost(BaseModel):
 class ObservingRunPostResponse(BaseModel):
     """Result of creating an observing run."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
 
@@ -58,9 +56,6 @@ def fetch_observing_runs(client: httpx.Client) -> list[ObservingRun]:
 
 def fetch_observing_run(client: httpx.Client, run_id: int) -> ObservingRun:
     """Retrieve a single observing run by ID.
-
-    The server includes the run's classical assignments and their targets,
-    kept as extra attributes.
 
     Parameters
     ----------

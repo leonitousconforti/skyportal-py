@@ -11,13 +11,9 @@ from skyportal_py._http import unwrap
 
 
 class FollowupRequest(BaseModel):
-    """A follow-up observation request.
+    """A follow-up observation request."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -31,7 +27,7 @@ class FollowupRequest(BaseModel):
 class FollowupRequestsPage(BaseModel):
     """One page of results from a follow-up requests query."""
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     followup_requests: list[FollowupRequest] = Field(default_factory=list)
     total_matches: int = Field(alias="totalMatches", default=0)
@@ -42,6 +38,8 @@ class FollowupRequestsPage(BaseModel):
 class FollowupRequestPost(BaseModel):
     """Payload for submitting a follow-up request."""
 
+    model_config = ConfigDict(extra="forbid")
+
     obj_id: str
     allocation_id: int
     payload: dict[str, Any]
@@ -51,7 +49,7 @@ class FollowupRequestPost(BaseModel):
 class FollowupRequestPostResponse(BaseModel):
     """Result of submitting a follow-up request."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
 

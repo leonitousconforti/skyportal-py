@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Classification(BaseModel):
-    """A classification of a source.
+    """A classification of a source."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -28,6 +24,8 @@ class Classification(BaseModel):
 class ClassificationPost(BaseModel):
     """Payload for posting a classification."""
 
+    model_config = ConfigDict(extra="forbid")
+
     obj_id: str
     classification: str
     taxonomy_id: int
@@ -38,7 +36,7 @@ class ClassificationPost(BaseModel):
 class ClassificationPostResponse(BaseModel):
     """Result of posting a classification."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     classification_id: int
 

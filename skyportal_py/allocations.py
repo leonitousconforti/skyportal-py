@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Allocation(BaseModel):
-    """An observing-time allocation on an instrument.
+    """An observing-time allocation on an instrument."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     pi: str | None = None
@@ -46,9 +42,6 @@ def fetch_allocations(
 
 def fetch_allocation(client: httpx.Client, allocation_id: int) -> Allocation:
     """Retrieve a single allocation by ID.
-
-    The server includes the allocation's follow-up requests and telescope
-    details, kept as extra attributes.
 
     Parameters
     ----------

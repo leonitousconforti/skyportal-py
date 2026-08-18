@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class PhotometryPoint(BaseModel):
-    """A single photometry point of a source.
+    """A single photometry point of a source."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -37,6 +33,8 @@ class PhotometryPost(BaseModel):
     measurement fields unset and provide ``limiting_mag``.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     obj_id: str
     mjd: float
     instrument_id: int
@@ -54,7 +52,7 @@ class PhotometryPost(BaseModel):
 class PhotometryPostResponse(BaseModel):
     """Result of posting photometry."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list)
 

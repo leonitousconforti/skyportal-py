@@ -68,8 +68,8 @@ client.delete_spectrum(56)
 source = sources.fetch_source(client, "ZTF20abcdef")
 ```
 
-Response models validate the fields they declare and keep everything else the
-server returns as extra attributes. Error responses raise `SkyPortalError`
+All models are strict (`extra="forbid"`): a field the model does not declare
+fails validation. Error responses raise `SkyPortalError`
 with the server's message and HTTP status code. For endpoints without a typed
 function yet, use the httpx client directly and `unwrap` the envelope:
 

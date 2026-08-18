@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Spectrum(BaseModel):
-    """A spectrum of a source.
+    """A spectrum of a source."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -30,6 +26,8 @@ class Spectrum(BaseModel):
 class SpectrumPost(BaseModel):
     """Payload for posting a spectrum."""
 
+    model_config = ConfigDict(extra="forbid")
+
     obj_id: str
     instrument_id: int
     observed_at: str
@@ -43,7 +41,7 @@ class SpectrumPost(BaseModel):
 class SpectrumPostResponse(BaseModel):
     """Result of posting a spectrum."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
 
@@ -51,7 +49,7 @@ class SpectrumPostResponse(BaseModel):
 class _SourceSpectra(BaseModel):
     """Envelope of a source's spectra response."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     spectra: list[Spectrum] = Field(default_factory=list)
 

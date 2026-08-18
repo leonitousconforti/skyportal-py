@@ -11,13 +11,9 @@ from skyportal_py._http import unwrap
 
 
 class Taxonomy(BaseModel):
-    """A classification taxonomy.
+    """A classification taxonomy."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     id: int
     name: str

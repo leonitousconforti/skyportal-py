@@ -14,7 +14,7 @@ BASE_URL = "https://skyportal.example.com"
 
 @respx.mock
 def test_fetch_source(client: SkyPortal) -> None:
-    """A source response validates into a Source model, keeping extras."""
+    """A source response validates into a Source model."""
     respx.get(f"{BASE_URL}/api/sources/ZTF20abcdef").mock(
         return_value=httpx.Response(
             200,
@@ -26,7 +26,6 @@ def test_fetch_source(client: SkyPortal) -> None:
                     "dec": -20.25,
                     "redshift": 0.1,
                     "groups": [{"id": 1, "name": "Program A", "nickname": "progA"}],
-                    "tns_name": "SN 2020xyz",
                 },
             },
         )
@@ -35,7 +34,6 @@ def test_fetch_source(client: SkyPortal) -> None:
     assert source.id == "ZTF20abcdef"
     assert source.ra == 10.5
     assert source.groups[0].name == "Program A"
-    assert source.model_extra == {"tns_name": "SN 2020xyz"}  # extras preserved
 
     # the same endpoint function is also bound as a method on the client
     assert client.fetch_source("ZTF20abcdef") == source
