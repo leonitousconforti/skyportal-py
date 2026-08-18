@@ -60,6 +60,7 @@ from skyportal_py import (
     teams,
     telescopes,
     thumbnails,
+    tokens,
     users,
     weather,
 )
@@ -560,6 +561,7 @@ class SkyPortal(httpx.Client):
     fetch_config = system.fetch_config
     fetch_db_stats = system.fetch_db_stats
     fetch_enum_types = system.fetch_enum_types
+    fetch_dbinfo = system.fetch_dbinfo
     fetch_obj_tag_options = tags.fetch_obj_tag_options
     post_obj_tag_option = tags.post_obj_tag_option
     update_obj_tag_option = tags.update_obj_tag_option
@@ -589,6 +591,11 @@ class SkyPortal(httpx.Client):
     fetch_thumbnail_paths = thumbnails.fetch_thumbnail_paths
     update_thumbnail_paths = thumbnails.update_thumbnail_paths
     delete_thumbnail_folders = thumbnails.delete_thumbnail_folders
+    fetch_tokens = tokens.fetch_tokens
+    fetch_token = tokens.fetch_token
+    post_token = tokens.post_token
+    update_token = tokens.update_token
+    delete_token = tokens.delete_token
     fetch_users = users.fetch_users
     fetch_user = users.fetch_user
     post_user = users.post_user

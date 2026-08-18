@@ -337,6 +337,7 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     *,
     page_number: int = 1,
     num_per_page: int = 100,
+    source_id: str | None = None,
     ra: float | None = None,
     dec: float | None = None,
     radius: float | None = None,
@@ -350,6 +351,8 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Client from :func:`skyportal_py.create_client`.
     page_number, num_per_page : int, optional
         Pagination controls.
+    source_id : str, optional
+        Keep sources whose object ID contains this (partial-match) string.
     ra, dec, radius : float, optional
         Cone-search filter, all in degrees; provide all three together.
     group_ids : list of int, optional
@@ -359,6 +362,8 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         "pageNumber": page_number,
         "numPerPage": num_per_page,
     }
+    if source_id is not None:
+        params["sourceID"] = source_id
     if ra is not None:
         params["ra"] = ra
     if dec is not None:

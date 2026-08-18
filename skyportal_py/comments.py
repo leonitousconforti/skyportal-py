@@ -103,15 +103,20 @@ def post_comment(
     return CommentPostResponse.model_validate(unwrap(response))
 
 
-def update_comment(
+def update_comment(  # noqa: PLR0913 -- mirrors the request body
     client: httpx.Client,
     obj_id: str,
     comment_id: int,
-    text: str,
+    text: str | None = None,
     *,
+    attachment_name: str | None = None,
+    attachment_body: str | None = None,
     group_ids: list[int] | None = None,
 ) -> None:
     """Update a comment on a source.
+
+    Omitted fields are left unchanged; provide at least one. To replace the
+    attachment, give ``attachment_name`` and ``attachment_body`` together.
 
     Parameters
     ----------
@@ -121,13 +126,22 @@ def update_comment(
         Object ID of the commented source.
     comment_id : int
         ID of the comment to update.
-    text : str
+    text : str, optional
         The new comment text.
+    attachment_name : str, optional
+        Filename of the replacement attachment.
+    attachment_body : str, optional
+        Base64-encoded contents of the replacement attachment, optionally
+        still carrying a ``data:...;base64,`` prefix.
     group_ids : list of int, optional
         Restrict the comment's visibility to these groups. If omitted, the
         visibility is left unchanged.
     """
-    payload: dict[str, str | list[int]] = {"text": text}
+    payload: dict[str, Any] = {}
+    if text is not None:
+        payload["text"] = text
+    if attachment_name is not None or attachment_body is not None:
+        payload["attachment"] = {"name": attachment_name, "body": attachment_body}
     if group_ids is not None:
         payload["group_ids"] = group_ids
     unwrap(client.put(f"/api/sources/{obj_id}/comments/{comment_id}", json=payload))

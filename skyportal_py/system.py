@@ -48,6 +48,27 @@ def fetch_sysinfo(client: httpx.Client) -> SysInfo:
     return SysInfo.model_validate(unwrap(response))
 
 
+class DBInfo(BaseModel):
+    """Basic health information about the instance's database."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_table_empty: bool | None = None
+    postgres_version: str | None = None
+
+
+def fetch_dbinfo(client: httpx.Client) -> DBInfo:
+    """Retrieve whether the sources table is empty and the Postgres version.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    """
+    response = client.get("/api/internal/dbinfo")
+    return DBInfo.model_validate(unwrap(response))
+
+
 def fetch_config(client: httpx.Client) -> dict[str, Any]:
     """Retrieve the parts of the instance config exposed to clients.
 
