@@ -2,6 +2,14 @@
 
 <!-- towncrier release notes start -->
 
+## 0.1.0 (2026-08-18)
+
+### New features
+
+- Add typed endpoint functions for groups, candidates, photometry, comments,
+  and classifications, all bound as methods on the `SkyPortal` client. ([#2](https://github.com/leonitousconforti/skyportal-py/pull/2))
+
+
 ## 0.1.dev6+g983a29b40 (2026-08-18)
 
 ### Other changes
