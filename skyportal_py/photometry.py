@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class PhotometryPoint(Model):
+class PhotometryPoint(BaseModel):
     """A single photometry point of a source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -24,13 +25,15 @@ class PhotometryPoint(Model):
     origin: str | None = None
 
 
-class PhotometryPost(Model):
+class PhotometryPost(BaseModel):
     """Payload for posting a photometry point.
 
     Provide either ``mag``/``magerr`` (magnitude space) or
     ``flux``/``fluxerr``/``zp`` (flux space). For non-detections, leave the
     measurement fields unset and provide ``limiting_mag``.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     obj_id: str
     mjd: float
@@ -46,8 +49,10 @@ class PhotometryPost(Model):
     group_ids: list[int] | None = None
 
 
-class PhotometryPostResponse(Model):
+class PhotometryPostResponse(BaseModel):
     """Result of posting photometry."""
+
+    model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list)
 

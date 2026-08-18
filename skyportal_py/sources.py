@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 from skyportal_py.groups import Group
 
 
-class Source(Model):
+class Source(BaseModel):
     """A SkyPortal source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float | None = None
@@ -20,10 +21,10 @@ class Source(Model):
     groups: list[Group] = Field(default_factory=list)
 
 
-class SourcesPage(Model):
+class SourcesPage(BaseModel):
     """One page of results from a sources query."""
 
-    model_config = ConfigDict(validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     sources: list[Source]
     total_matches: int = Field(alias="totalMatches")
@@ -31,8 +32,10 @@ class SourcesPage(Model):
     num_per_page: int = Field(alias="numPerPage", default=100)
 
 
-class SourcePost(Model):
+class SourcePost(BaseModel):
     """Payload for saving a new source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float
@@ -40,8 +43,10 @@ class SourcePost(Model):
     group_ids: list[int] | None = None
 
 
-class SourcePostResponse(Model):
+class SourcePostResponse(BaseModel):
     """Result of saving a new source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     saved_to_groups: list[int] = Field(default_factory=list)

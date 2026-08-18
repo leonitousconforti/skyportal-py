@@ -5,14 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class UserProfile(Model):
+class UserProfile(BaseModel):
     """The user associated with the API token."""
+
+    model_config = ConfigDict(extra="forbid")
 
     username: str
     first_name: str | None = None

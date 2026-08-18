@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import httpx
+from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Filter(Model):
+class Filter(BaseModel):
     """An alert-stream filter belonging to a group."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str

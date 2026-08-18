@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Group(Model):
+class Group(BaseModel):
     """A SkyPortal group."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str
@@ -18,8 +19,10 @@ class Group(Model):
     single_user_group: bool = False
 
 
-class GroupsResponse(Model):
+class GroupsResponse(BaseModel):
     """The groups visible to the token, split by relationship to the user."""
+
+    model_config = ConfigDict(extra="forbid")
 
     user_groups: list[Group] = Field(default_factory=list)
     user_accessible_groups: list[Group] = Field(default_factory=list)

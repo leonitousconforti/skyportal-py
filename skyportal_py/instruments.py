@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Instrument(Model):
+class Instrument(BaseModel):
     """A SkyPortal instrument."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str

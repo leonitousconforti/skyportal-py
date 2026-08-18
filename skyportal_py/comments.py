@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import httpx
+from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Comment(Model):
+class Comment(BaseModel):
     """A comment on a source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     text: str
@@ -18,8 +20,10 @@ class Comment(Model):
     created_at: str | None = None
 
 
-class CommentPostResponse(Model):
+class CommentPostResponse(BaseModel):
     """Result of posting a comment."""
+
+    model_config = ConfigDict(extra="forbid")
 
     comment_id: int
 

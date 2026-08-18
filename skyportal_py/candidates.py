@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Candidate(Model):
+class Candidate(BaseModel):
     """A SkyPortal candidate."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float | None = None
@@ -18,10 +19,10 @@ class Candidate(Model):
     redshift: float | None = None
 
 
-class CandidatesPage(Model):
+class CandidatesPage(BaseModel):
     """One page of results from a candidates query."""
 
-    model_config = ConfigDict(validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     candidates: list[Candidate]
     total_matches: int = Field(alias="totalMatches")
@@ -29,8 +30,10 @@ class CandidatesPage(Model):
     num_per_page: int = Field(alias="numPerPage", default=25)
 
 
-class CandidatePost(Model):
+class CandidatePost(BaseModel):
     """Payload for posting a new candidate."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float
@@ -39,8 +42,10 @@ class CandidatePost(Model):
     passed_at: str
 
 
-class CandidatePostResponse(Model):
+class CandidatePostResponse(BaseModel):
     """Result of posting a new candidate."""
+
+    model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list)
 

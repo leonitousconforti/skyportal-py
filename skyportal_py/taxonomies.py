@@ -5,16 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-from pydantic import ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Taxonomy(Model):
+class Taxonomy(BaseModel):
     """A classification taxonomy."""
 
-    model_config = ConfigDict(validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     id: int
     name: str

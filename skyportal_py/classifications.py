@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import httpx
+from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Classification(Model):
+class Classification(BaseModel):
     """A classification of a source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -19,8 +21,10 @@ class Classification(Model):
     author_name: str | None = None
 
 
-class ClassificationPost(Model):
+class ClassificationPost(BaseModel):
     """Payload for posting a classification."""
+
+    model_config = ConfigDict(extra="forbid")
 
     obj_id: str
     classification: str
@@ -29,8 +33,10 @@ class ClassificationPost(Model):
     group_ids: list[int] | None = None
 
 
-class ClassificationPostResponse(Model):
+class ClassificationPostResponse(BaseModel):
     """Result of posting a classification."""
+
+    model_config = ConfigDict(extra="forbid")
 
     classification_id: int
 

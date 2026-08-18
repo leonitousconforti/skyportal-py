@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Spectrum(Model):
+class Spectrum(BaseModel):
     """A spectrum of a source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str
@@ -22,8 +23,10 @@ class Spectrum(Model):
     origin: str | None = None
 
 
-class SpectrumPost(Model):
+class SpectrumPost(BaseModel):
     """Payload for posting a spectrum."""
+
+    model_config = ConfigDict(extra="forbid")
 
     obj_id: str
     instrument_id: int
@@ -35,14 +38,18 @@ class SpectrumPost(Model):
     group_ids: list[int] | None = None
 
 
-class SpectrumPostResponse(Model):
+class SpectrumPostResponse(BaseModel):
     """Result of posting a spectrum."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
 
 
-class _SourceSpectra(Model):
+class _SourceSpectra(BaseModel):
     """Envelope of a source's spectra response."""
+
+    model_config = ConfigDict(extra="forbid")
 
     obj_id: str | None = None
     spectra: list[Spectrum] = Field(default_factory=list)

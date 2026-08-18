@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class User(Model):
+class User(BaseModel):
     """A SkyPortal user."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     username: str
@@ -19,10 +20,10 @@ class User(Model):
     contact_email: str | None = None
 
 
-class UsersPage(Model):
+class UsersPage(BaseModel):
     """One page of results from a users query."""
 
-    model_config = ConfigDict(validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     users: list[User]
     total_matches: int = Field(alias="totalMatches")

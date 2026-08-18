@@ -5,14 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model
 
 
-class Annotation(Model):
+class Annotation(BaseModel):
     """A machine-generated annotation on a source."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str | None = None
@@ -22,8 +23,10 @@ class Annotation(Model):
     created_at: str | None = None
 
 
-class AnnotationPostResponse(Model):
+class AnnotationPostResponse(BaseModel):
     """Result of posting an annotation."""
+
+    model_config = ConfigDict(extra="forbid")
 
     annotation_id: int
 
