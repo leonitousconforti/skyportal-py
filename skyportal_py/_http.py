@@ -36,3 +36,24 @@ def unwrap(response: httpx.Response) -> Any:  # noqa: ANN401
 
     message = payload.get("message") or f"HTTP {response.status_code}"
     raise SkyPortalError(message, response.status_code)
+
+
+def unwrap_content(response: httpx.Response) -> bytes:
+    """Return the raw body of a binary SkyPortal response.
+
+    Endpoints that return a file (plots, skymaps, finding charts) send bytes
+    rather than a JSON envelope, so their errors are unwrapped separately.
+
+    Raises
+    ------
+    SkyPortalError
+        If the response is an error response.
+    """
+    if response.is_success:
+        return response.content
+
+    try:
+        message = response.json().get("message") or f"HTTP {response.status_code}"
+    except ValueError:
+        message = f"HTTP {response.status_code}"
+    raise SkyPortalError(message, response.status_code)

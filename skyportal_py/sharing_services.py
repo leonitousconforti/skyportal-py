@@ -1,0 +1,597 @@
+"""Typed endpoint functions for ``/api/sharing_service``."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+import httpx
+from pydantic import BaseModel, ConfigDict, Field
+
+from skyportal_py._http import unwrap
+from skyportal_py.instruments import Instrument
+from skyportal_py.sources import Source
+from skyportal_py.streams import Stream
+
+
+class PhotometryOptions(BaseModel):
+    """Which photometry a sharing service publishes (upstream ``PHOTOMETRY_OPTIONS``).
+
+    The server fills in every option it knows about, defaulting each to true,
+    so a stored value always carries the full set.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    first_and_last_detections: bool | None = None
+    auto_sharing_allow_archival: bool | None = None
+
+
+class SharingServiceCoauthor(BaseModel):
+    """A coauthor of a service's submissions (upstream ``SharingServiceCoauthor``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    sharing_service_id: int | None = None
+    user_id: int | None = None
+
+
+class SharingServiceGroupAutoPublisher(BaseModel):
+    """An auto-publisher (upstream ``SharingServiceGroupAutoPublisher``).
+
+    ``user_id`` is a column property derived from ``group_user_id`` rather
+    than a stored column.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    sharing_service_group_id: int | None = None
+    group_user_id: int | None = None
+    user_id: int | None = None
+
+
+class SharingServiceGroup(BaseModel):
+    """A group's access to a service (upstream ``SharingServiceGroup``).
+
+    The ``group`` and ``sharing_service`` relationships are never eager-loaded
+    by the endpoints, so they never appear and are not declared.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    sharing_service_id: int | None = None
+    group_id: int | None = None
+    owner: bool | None = None
+    auto_share_to_tns: bool | None = None
+    auto_share_to_hermes: bool | None = None
+    auto_sharing_allow_bots: bool | None = None
+    auto_publishers: list[SharingServiceGroupAutoPublisher] = Field(
+        default_factory=list
+    )
+
+
+class SharingService(BaseModel):
+    """A service publishing objects externally (upstream ``SharingService``).
+
+    ``owner_group_ids`` is not a column: the endpoint derives it from the
+    owning entries of ``groups`` and injects it. The encrypted TNS credentials
+    (``_tns_altdata``) are never serialized, and the ``submissions``
+    relationship is never eager-loaded, so neither is declared.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    name: str | None = None
+    acknowledgments: str | None = None
+    testing: bool | None = None
+    photometry_options: PhotometryOptions | None = None
+    enable_sharing_with_tns: bool | None = None
+    enable_sharing_with_hermes: bool | None = None
+    tns_bot_name: str | None = None
+    tns_bot_id: int | None = None
+    tns_source_group_id: int | None = None
+    publish_existing_tns_objects: bool | None = None
+    owner_group_ids: list[int] = Field(default_factory=list)
+    groups: list[SharingServiceGroup] = Field(default_factory=list)
+    coauthors: list[SharingServiceCoauthor] = Field(default_factory=list)
+    instruments: list[Instrument] = Field(default_factory=list)
+    streams: list[Stream] = Field(default_factory=list)
+
+
+class SharingServiceSubmission(BaseModel):
+    """A publication request (upstream ``SharingServiceSubmission``).
+
+    ``tns_name`` is not a column: the endpoint copies it off the submitted
+    object. ``tns_payload``, ``tns_response`` and ``hermes_response`` are
+    deferred upstream and only appear when explicitly requested. The ``user``
+    and ``sharing_service`` relationships are never eager-loaded, so they are
+    not declared.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    sharing_service_id: int | None = None
+    obj_id: str | None = None
+    obj: Source | None = None
+    tns_name: str | None = None
+    user_id: int | None = None
+    custom_publishing_string: str | None = None
+    custom_remarks_string: str | None = None
+    publish_to_tns: bool | None = None
+    tns_status: str | None = None
+    tns_submission_id: int | None = None
+    tns_payload: dict[str, Any] | None = None
+    tns_response: dict[str, Any] | None = None
+    publish_to_hermes: bool | None = None
+    hermes_status: str | None = None
+    hermes_response: dict[str, Any] | None = None
+    archival: bool | None = None
+    archival_comment: str | None = None
+    auto_submission: bool | None = None
+    instrument_ids: list[int] | None = None
+    stream_ids: list[int] | None = None
+    photometry_options: PhotometryOptions | None = None
+
+
+class SharingServiceSubmissionsPage(BaseModel):
+    """One page of results from a sharing service submissions query."""
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
+
+    sharing_service_id: int | None = None
+    submissions: list[SharingServiceSubmission] = Field(default_factory=list)
+    total_matches: int = Field(alias="totalMatches", default=0)
+    page_number: int = Field(alias="pageNumber", default=1)
+    num_per_page: int = Field(alias="numPerPage", default=100)
+
+
+class SharingServicePost(BaseModel):
+    """Payload for creating or updating a sharing service."""
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
+
+    name: str
+    owner_group_ids: list[int] | None = None
+    instrument_ids: list[int] | None = None
+    stream_ids: list[int] | None = None
+    acknowledgments: str | None = None
+    testing: bool | None = None
+    photometry_options: PhotometryOptions | None = None
+    enable_sharing_with_tns: bool | None = None
+    enable_sharing_with_hermes: bool | None = None
+    tns_bot_name: str | None = None
+    tns_bot_id: int | None = None
+    tns_source_group_id: int | None = None
+    tns_altdata: dict[str, Any] | None = Field(default=None, alias="_tns_altdata")
+    publish_existing_tns_objects: bool | None = None
+
+
+class SharingServiceSubmissionPost(BaseModel):
+    """Payload for requesting the publication of an object."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    obj_id: str
+    sharing_service_id: int
+    publishers: str
+    remarks: str | None = None
+    archival: bool | None = None
+    archival_comment: str | None = None
+    instrument_ids: list[int] | None = None
+    stream_ids: list[int] | None = None
+    photometry_options: PhotometryOptions | None = None
+    publish_to_tns: bool | None = None
+    publish_to_hermes: bool | None = None
+
+
+class SharingServicePutResponse(BaseModel):
+    """Result of creating or updating a sharing service."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+
+
+class SharingServiceCoauthorPostResponse(BaseModel):
+    """Result of adding a coauthor to a sharing service."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+
+
+class SharingServiceGroupPutResponse(BaseModel):
+    """Result of granting or editing a group's access to a service."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+
+
+class SharingServiceAutoPublishersPostResponse(BaseModel):
+    """Result of adding auto-publishers to a sharing service group."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[int] = Field(default_factory=list)
+
+
+def fetch_sharing_services(client: httpx.Client) -> list[SharingService]:
+    """Retrieve all sharing services visible to the token.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+
+    Notes
+    -----
+    Only services shared with one of the caller's groups are returned,
+    unless the caller is a system admin. The TNS credentials
+    (``_tns_altdata``) are never included in the response.
+    """
+    response = client.get("/api/sharing_service")
+    return [SharingService.model_validate(item) for item in unwrap(response)]
+
+
+def fetch_sharing_service(
+    client: httpx.Client,
+    sharing_service_id: int,
+) -> SharingService:
+    """Retrieve a single sharing service by ID.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    """
+    response = client.get(f"/api/sharing_service/{sharing_service_id}")
+    return SharingService.model_validate(unwrap(response))
+
+
+def post_sharing_service(
+    client: httpx.Client,
+    payload: SharingServicePost,
+) -> SharingServicePutResponse:
+    """Create a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    payload : SharingServicePost
+        The service to create. ``name`` must be unique and at least one
+        instrument must be given. ``owner_group_ids`` lists the groups that
+        will own the service; owner groups are created with all their
+        auto-sharing flags off. If ``enable_sharing_with_tns`` is true, then
+        ``tns_bot_id``, ``tns_source_group_id`` and a ``tns_altdata``
+        containing an ``api_key`` are all required. ``testing`` defaults to
+        true server-side, meaning payloads are stored but nothing is
+        actually published.
+    """
+    response = client.put(
+        "/api/sharing_service",
+        json=payload.model_dump(by_alias=True, exclude_none=True),
+    )
+    return SharingServicePutResponse.model_validate(unwrap(response))
+
+
+def update_sharing_service(
+    client: httpx.Client,
+    sharing_service_id: int,
+    payload: SharingServicePost,
+) -> SharingServicePutResponse:
+    """Update an existing sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service to update.
+    payload : SharingServicePost
+        The new values. Omitted fields are left unchanged, so ``name`` may
+        simply repeat the current name. ``owner_group_ids`` is ignored here;
+        use :func:`update_sharing_service_group` to change ownership.
+        Instruments are only replaced when ``instrument_ids`` is non-empty,
+        while ``stream_ids`` always replaces the current streams. Disabling
+        TNS or Hermes sharing also clears the matching auto-sharing flags on
+        every group of the service.
+    """
+    response = client.put(
+        f"/api/sharing_service/{sharing_service_id}",
+        json=payload.model_dump(by_alias=True, exclude_none=True),
+    )
+    return SharingServicePutResponse.model_validate(unwrap(response))
+
+
+def delete_sharing_service(client: httpx.Client, sharing_service_id: int) -> None:
+    """Delete a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service to delete. Only a member of one of its
+        owner groups may delete it.
+    """
+    unwrap(client.delete(f"/api/sharing_service/{sharing_service_id}"))
+
+
+def post_sharing_service_submission(
+    client: httpx.Client,
+    payload: SharingServiceSubmissionPost,
+) -> None:
+    """Request the publication of an object through a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    payload : SharingServiceSubmissionPost
+        The submission to queue. At least one of ``publish_to_tns`` and
+        ``publish_to_hermes`` must be true, ``publishers`` must be a
+        non-empty string, and ``archival_comment`` is required when
+        ``archival`` is true. Submitting the same object to the same
+        destination twice through the same service is rejected. The
+        submission is queued and processed asynchronously; poll
+        :func:`fetch_sharing_service_submissions` for its status.
+    """
+    unwrap(
+        client.post(
+            "/api/sharing_service/submission",
+            json=payload.model_dump(exclude_none=True),
+        )
+    )
+
+
+def fetch_sharing_service_submission(
+    client: httpx.Client,
+    sharing_service_submission_id: int,
+    *,
+    sharing_service_id: int,
+) -> SharingServiceSubmission:
+    """Retrieve a single sharing service submission by ID.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_submission_id : int
+        ID of the submission.
+    sharing_service_id : int
+        ID of the sharing service the submission belongs to. Required by
+        the endpoint even though the submission ID is unique.
+    """
+    response = client.get(
+        f"/api/sharing_service/submission/{sharing_service_submission_id}",
+        params={"sharing_service_id": sharing_service_id},
+    )
+    return SharingServiceSubmission.model_validate(unwrap(response))
+
+
+def fetch_sharing_service_submissions(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
+    client: httpx.Client,
+    *,
+    sharing_service_id: int,
+    page_number: int = 1,
+    num_per_page: int = 100,
+    include_payload: bool = False,
+    include_response: bool = False,
+    object_id: str | None = None,
+) -> SharingServiceSubmissionsPage:
+    """Query the submissions of a sharing service, one page at a time.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service whose submissions are queried.
+    page_number, num_per_page : int, optional
+        Pagination controls. Submissions are returned newest first.
+    include_payload : bool, optional
+        Include the payload sent to TNS, which is deferred by default.
+    include_response : bool, optional
+        Include the raw response from the external service, which is
+        deferred by default.
+    object_id : str, optional
+        Restrict to submissions of this object.
+    """
+    params: dict[str, str | int | bool] = {
+        "sharing_service_id": sharing_service_id,
+        "pageNumber": page_number,
+        "numPerPage": num_per_page,
+        "include_payload": include_payload,
+        "include_response": include_response,
+    }
+    if object_id is not None:
+        params["objectID"] = object_id
+    response = client.get("/api/sharing_service/submission", params=params)
+    return SharingServiceSubmissionsPage.model_validate(unwrap(response))
+
+
+def post_sharing_service_coauthor(
+    client: httpx.Client,
+    sharing_service_id: int,
+    user_id: int,
+) -> SharingServiceCoauthorPostResponse:
+    """Add a coauthor to a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    user_id : int
+        ID of the user to credit as a coauthor. The user must have at least
+        one affiliation set in their profile and must not be a bot.
+    """
+    response = client.post(
+        f"/api/sharing_service/{sharing_service_id}/coauthor/{user_id}"
+    )
+    return SharingServiceCoauthorPostResponse.model_validate(unwrap(response))
+
+
+def delete_sharing_service_coauthor(
+    client: httpx.Client,
+    sharing_service_id: int,
+    user_id: int,
+) -> None:
+    """Remove a coauthor from a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    user_id : int
+        ID of the user to remove as a coauthor.
+    """
+    unwrap(
+        client.delete(f"/api/sharing_service/{sharing_service_id}/coauthor/{user_id}")
+    )
+
+
+def update_sharing_service_group(  # noqa: PLR0913 -- mirrors the endpoint's request body
+    client: httpx.Client,
+    sharing_service_id: int,
+    group_id: int,
+    *,
+    owner: bool | None = None,
+    auto_share_to_tns: bool | None = None,
+    auto_share_to_hermes: bool | None = None,
+    auto_sharing_allow_bots: bool | None = None,
+) -> SharingServiceGroupPutResponse:
+    """Give a group access to a sharing service, or edit its settings.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    group_id : int
+        ID of the group to add or edit.
+    owner : bool, optional
+        Whether the group owns the sharing service. Ownership cannot be
+        removed from the only owning group.
+    auto_share_to_tns, auto_share_to_hermes : bool, optional
+        Whether new sources saved to the group are published automatically.
+    auto_sharing_allow_bots : bool, optional
+        Whether bot users may act as auto-publishers. It cannot be turned
+        off while a bot is still listed as an auto-publisher.
+
+    Notes
+    -----
+    When the group already has access, at least one of the options must be
+    given; otherwise omitted options default to false on the new access.
+    """
+    payload: dict[str, bool] = {}
+    if owner is not None:
+        payload["owner"] = owner
+    if auto_share_to_tns is not None:
+        payload["auto_share_to_tns"] = auto_share_to_tns
+    if auto_share_to_hermes is not None:
+        payload["auto_share_to_hermes"] = auto_share_to_hermes
+    if auto_sharing_allow_bots is not None:
+        payload["auto_sharing_allow_bots"] = auto_sharing_allow_bots
+    response = client.put(
+        f"/api/sharing_service/{sharing_service_id}/group/{group_id}",
+        json=payload,
+    )
+    return SharingServiceGroupPutResponse.model_validate(unwrap(response))
+
+
+def delete_sharing_service_group(
+    client: httpx.Client,
+    sharing_service_id: int,
+    group_id: int,
+) -> None:
+    """Remove a group's access to a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    group_id : int
+        ID of the group to remove. The only group owning the service cannot
+        be removed; add another owner group first.
+    """
+    unwrap(client.delete(f"/api/sharing_service/{sharing_service_id}/group/{group_id}"))
+
+
+def post_sharing_service_auto_publishers(
+    client: httpx.Client,
+    sharing_service_id: int,
+    group_id: int,
+    user_ids: list[int],
+) -> SharingServiceAutoPublishersPostResponse:
+    """Add auto-publishers to a group of a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    group_id : int
+        ID of the group, which must already have access to the service.
+    user_ids : list of int
+        IDs of the users to add. Each must be a member of the group and
+        have at least one affiliation set in their profile. Bot users are
+        only accepted when the group has ``auto_sharing_allow_bots`` set.
+        The request fails as a whole if any user is rejected.
+    """
+    response = client.post(
+        f"/api/sharing_service/{sharing_service_id}/group/{group_id}/auto_publisher",
+        json={"user_ids": user_ids},
+    )
+    return SharingServiceAutoPublishersPostResponse.model_validate(unwrap(response))
+
+
+def delete_sharing_service_auto_publishers(
+    client: httpx.Client,
+    sharing_service_id: int,
+    group_id: int,
+    user_ids: list[int],
+) -> None:
+    """Remove auto-publishers from a group of a sharing service.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    sharing_service_id : int
+        ID of the sharing service.
+    group_id : int
+        ID of the group.
+    user_ids : list of int
+        IDs of the users to remove. Each must currently be an
+        auto-publisher of the group; the request fails as a whole
+        otherwise.
+    """
+    path = f"/api/sharing_service/{sharing_service_id}/group/{group_id}/auto_publisher"
+    unwrap(client.request("DELETE", path, json={"user_ids": user_ids}))

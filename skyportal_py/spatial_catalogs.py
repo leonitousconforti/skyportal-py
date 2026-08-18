@@ -1,0 +1,156 @@
+"""Typed endpoint functions for ``/api/spatial_catalog``."""
+
+from __future__ import annotations
+
+import datetime
+from typing import Any
+
+import httpx
+from pydantic import BaseModel, ConfigDict
+
+from skyportal_py._http import unwrap
+
+
+class SpatialCatalogEntry(BaseModel):
+    """An entry in a spatial catalog (upstream ``SpatialCatalogEntry``)."""
+
+    # ``uniq`` and ``probdensity`` are deferred columns upstream, so they are
+    # absent unless a query explicitly undefers them. The ``catalog``
+    # back-reference is never populated by a load, so it is not declared.
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    catalog_id: int | None = None
+    entry_name: str | None = None
+    # The cone (``ra``, ``dec``, ``radius``) or ellipse (``ra``, ``dec``,
+    # ``amaj``, ``amin``, ``phi``) the entry's skymap was generated from.
+    data: dict[str, Any] | None = None
+    uniq: list[int] | None = None
+    probdensity: list[float] | None = None
+
+
+class SpatialCatalog(BaseModel):
+    """A spatial catalog of skymap regions (upstream ``SpatialCatalog``)."""
+
+    # ``entries`` is only populated by the single-catalog endpoint, and
+    # ``entries_count`` is injected only by the list endpoint.
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    catalog_name: str | None = None
+    entries: list[SpatialCatalogEntry] | None = None
+    entries_count: int | None = None
+
+
+class SpatialCatalogPostResponse(BaseModel):
+    """Result of ingesting a spatial catalog."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+
+
+def fetch_spatial_catalog(client: httpx.Client, catalog_id: int) -> SpatialCatalog:
+    """Retrieve a single spatial catalog, including its entries.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    catalog_id : int
+        ID of the spatial catalog.
+    """
+    response = client.get(f"/api/spatial_catalog/{catalog_id}")
+    return SpatialCatalog.model_validate(unwrap(response))
+
+
+def fetch_spatial_catalogs(client: httpx.Client) -> list[SpatialCatalog]:
+    """Retrieve all spatial catalogs, each with its entry count.
+
+    The returned catalogs carry ``entries_count`` but not the entries
+    themselves; use :func:`fetch_spatial_catalog` for the entries.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    """
+    response = client.get("/api/spatial_catalog")
+    return [SpatialCatalog.model_validate(catalog) for catalog in unwrap(response)]
+
+
+def post_spatial_catalog(
+    client: httpx.Client,
+    catalog_name: str,
+    catalog_data: dict[str, list[Any]],
+) -> SpatialCatalogPostResponse:
+    """Ingest a spatial catalog.
+
+    The entry ingestion runs asynchronously on the server; the returned
+    ID is available immediately but the entries may take a while to
+    appear.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    catalog_name : str
+        Name of the spatial catalog. Reused if it already exists.
+    catalog_data : dict of str to list
+        Maps column names to equal-length lists. ``name``, ``ra``, and
+        ``dec`` are required, with ``ra`` in ``[0, 360)`` degrees and
+        ``dec`` in ``[-90, 90]`` degrees. Either ``radius`` (cone) or
+        ``amaj``, ``amin``, and ``phi`` (ellipse) are also required.
+    """
+    payload = {"catalog_name": catalog_name, "catalog_data": catalog_data}
+    response = client.post("/api/spatial_catalog", json=payload)
+    return SpatialCatalogPostResponse.model_validate(unwrap(response))
+
+
+def delete_spatial_catalog(client: httpx.Client, catalog_id: int) -> None:
+    """Delete a spatial catalog.
+
+    The deletion runs asynchronously on the server; a success response
+    only means the deletion was started.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    catalog_id : int
+        ID of the spatial catalog to delete.
+    """
+    unwrap(client.delete(f"/api/spatial_catalog/{catalog_id}"))
+
+
+def post_spatial_catalog_ascii(
+    client: httpx.Client,
+    catalog_name: str,
+    catalog_data: str,
+) -> SpatialCatalogPostResponse:
+    """Upload a spatial catalog from an ASCII file.
+
+    Requires the Upload data ACL. The entry ingestion runs
+    asynchronously on the server; the returned ID is available
+    immediately but the entries may take a while to appear.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    catalog_name : str
+        Name of the spatial catalog. Reused if it already exists.
+    catalog_data : str
+        File content as a comma-separated ASCII table. ``name``, ``ra``,
+        and ``dec`` columns are required, plus either ``radius`` (cone)
+        or ``amaj``, ``amin``, and ``phi`` (ellipse).
+    """
+    payload = {"catalogName": catalog_name, "catalogData": catalog_data}
+    response = client.post("/api/spatial_catalog/ascii", json=payload)
+    return SpatialCatalogPostResponse.model_validate(unwrap(response))
