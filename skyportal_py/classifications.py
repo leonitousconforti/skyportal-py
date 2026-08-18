@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import Model, ResponseModel
 
 
-class Classification(BaseModel):
+class Classification(ResponseModel):
     """A classification of a source.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     id: int
     obj_id: str
@@ -25,7 +23,7 @@ class Classification(BaseModel):
     author_name: str | None = None
 
 
-class ClassificationPost(BaseModel):
+class ClassificationPost(Model):
     """Payload for posting a classification."""
 
     obj_id: str
@@ -35,10 +33,8 @@ class ClassificationPost(BaseModel):
     group_ids: list[int] | None = None
 
 
-class ClassificationPostResponse(BaseModel):
+class ClassificationPostResponse(ResponseModel):
     """Result of posting a classification."""
-
-    model_config = ConfigDict(extra="allow")
 
     classification_id: int
 

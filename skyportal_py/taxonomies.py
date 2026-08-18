@@ -5,19 +5,20 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import ResponseModel
 
 
-class Taxonomy(BaseModel):
+class Taxonomy(ResponseModel):
     """A classification taxonomy.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True)
 
     id: int
     name: str

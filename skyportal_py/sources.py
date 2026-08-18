@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import Model, ResponseModel
 from skyportal_py.groups import Group
 
 
-class Source(BaseModel):
+class Source(ResponseModel):
     """A SkyPortal source.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     id: str
     ra: float | None = None
@@ -25,10 +24,10 @@ class Source(BaseModel):
     groups: list[Group] = Field(default_factory=list)
 
 
-class SourcesPage(BaseModel):
+class SourcesPage(ResponseModel):
     """One page of results from a sources query."""
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True)
 
     sources: list[Source]
     total_matches: int = Field(alias="totalMatches")
@@ -36,7 +35,7 @@ class SourcesPage(BaseModel):
     num_per_page: int = Field(alias="numPerPage", default=100)
 
 
-class SourcePost(BaseModel):
+class SourcePost(Model):
     """Payload for saving a new source."""
 
     id: str
@@ -45,10 +44,8 @@ class SourcePost(BaseModel):
     group_ids: list[int] | None = None
 
 
-class SourcePostResponse(BaseModel):
+class SourcePostResponse(ResponseModel):
     """Result of saving a new source."""
-
-    model_config = ConfigDict(extra="allow")
 
     id: str
     saved_to_groups: list[int] = Field(default_factory=list)

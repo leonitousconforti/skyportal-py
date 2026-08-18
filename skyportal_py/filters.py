@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import ResponseModel
 
 
-class Filter(BaseModel):
+class Filter(ResponseModel):
     """An alert-stream filter belonging to a group.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     id: int
     name: str

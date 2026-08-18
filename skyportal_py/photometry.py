@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import Model, ResponseModel
 
 
-class PhotometryPoint(BaseModel):
+class PhotometryPoint(ResponseModel):
     """A single photometry point of a source.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     id: int
     obj_id: str
@@ -29,7 +28,7 @@ class PhotometryPoint(BaseModel):
     origin: str | None = None
 
 
-class PhotometryPost(BaseModel):
+class PhotometryPost(Model):
     """Payload for posting a photometry point.
 
     Provide either ``mag``/``magerr`` (magnitude space) or
@@ -51,10 +50,8 @@ class PhotometryPost(BaseModel):
     group_ids: list[int] | None = None
 
 
-class PhotometryPostResponse(BaseModel):
+class PhotometryPostResponse(ResponseModel):
     """Result of posting photometry."""
-
-    model_config = ConfigDict(extra="allow")
 
     ids: list[int] = Field(default_factory=list)
 

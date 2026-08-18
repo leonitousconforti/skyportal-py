@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import ResponseModel
 
 
-class User(BaseModel):
+class User(ResponseModel):
     """A SkyPortal user.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     id: int
     username: str
@@ -24,10 +23,10 @@ class User(BaseModel):
     contact_email: str | None = None
 
 
-class UsersPage(BaseModel):
+class UsersPage(ResponseModel):
     """One page of results from a users query."""
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True)
 
     users: list[User]
     total_matches: int = Field(alias="totalMatches")

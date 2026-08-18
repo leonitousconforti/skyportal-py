@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 import httpx
-from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
+from skyportal_py._models import ResponseModel
 
 
-class Comment(BaseModel):
+class Comment(ResponseModel):
     """A comment on a source.
 
     Only commonly used fields are modeled; everything else the server
     returns is kept as extra attributes.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     id: int
     text: str
@@ -24,10 +22,8 @@ class Comment(BaseModel):
     created_at: str | None = None
 
 
-class CommentPostResponse(BaseModel):
+class CommentPostResponse(ResponseModel):
     """Result of posting a comment."""
-
-    model_config = ConfigDict(extra="allow")
 
     comment_id: int
 
