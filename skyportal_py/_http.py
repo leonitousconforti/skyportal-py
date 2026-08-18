@@ -30,7 +30,9 @@ def unwrap(response: httpx.Response) -> Any:  # noqa: ANN401
             f"SkyPortal returned a non-JSON response (HTTP {response.status_code})"
         )
         raise SkyPortalError(message, response.status_code) from None
+
     if response.is_success and payload.get("status") == "success":
         return payload.get("data")
+
     message = payload.get("message") or f"HTTP {response.status_code}"
     raise SkyPortalError(message, response.status_code)
