@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Group(BaseModel):
-    """A SkyPortal group.
+    """A SkyPortal group."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str
@@ -26,7 +22,7 @@ class Group(BaseModel):
 class GroupsResponse(BaseModel):
     """The groups visible to the token, split by relationship to the user."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     user_groups: list[Group] = Field(default_factory=list)
     user_accessible_groups: list[Group] = Field(default_factory=list)

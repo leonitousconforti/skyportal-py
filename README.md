@@ -42,8 +42,8 @@ people = client.fetch_users()  # -> UsersPage
 source = sources.fetch_source(client, "ZTF20abcdef")
 ```
 
-Response models validate the fields they declare and keep everything else the
-server returns as extra attributes. Error responses raise `SkyPortalError`
+All models use `extra="forbid"`: unknown fields in request payloads and
+server responses raise a validation error. Error responses raise `SkyPortalError`
 with the server's message and HTTP status code. For endpoints without a typed
 function yet, use the httpx client directly and `unwrap` the envelope:
 

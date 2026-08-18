@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Comment(BaseModel):
-    """A comment on a source.
+    """A comment on a source."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     text: str
@@ -27,7 +23,7 @@ class Comment(BaseModel):
 class CommentPostResponse(BaseModel):
     """Result of posting a comment."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     comment_id: int
 

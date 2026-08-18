@@ -11,13 +11,9 @@ from skyportal_py._http import unwrap
 
 
 class Annotation(BaseModel):
-    """A machine-generated annotation on a source.
+    """A machine-generated annotation on a source."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     obj_id: str | None = None
@@ -30,7 +26,7 @@ class Annotation(BaseModel):
 class AnnotationPostResponse(BaseModel):
     """Result of posting an annotation."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     annotation_id: int
 

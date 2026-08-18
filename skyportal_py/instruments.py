@@ -9,13 +9,9 @@ from skyportal_py._http import unwrap
 
 
 class Instrument(BaseModel):
-    """A SkyPortal instrument.
+    """A SkyPortal instrument."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str

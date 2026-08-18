@@ -10,13 +10,9 @@ from skyportal_py.groups import Group
 
 
 class Source(BaseModel):
-    """A SkyPortal source.
+    """A SkyPortal source."""
 
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
-
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     ra: float | None = None
@@ -28,7 +24,7 @@ class Source(BaseModel):
 class SourcesPage(BaseModel):
     """One page of results from a sources query."""
 
-    model_config = ConfigDict(extra="allow", validate_by_name=True)
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     sources: list[Source]
     total_matches: int = Field(alias="totalMatches")
@@ -39,6 +35,8 @@ class SourcesPage(BaseModel):
 class SourcePost(BaseModel):
     """Payload for saving a new source."""
 
+    model_config = ConfigDict(extra="forbid")
+
     id: str
     ra: float
     dec: float
@@ -48,7 +46,7 @@ class SourcePost(BaseModel):
 class SourcePostResponse(BaseModel):
     """Result of saving a new source."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     saved_to_groups: list[int] = Field(default_factory=list)
