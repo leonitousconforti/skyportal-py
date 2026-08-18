@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import httpx
 
-from skyportal_py import profile, sources
+from skyportal_py import (
+    candidates,
+    classifications,
+    comments,
+    groups,
+    photometry,
+    profile,
+    sources,
+)
 
 
 class SkyPortal(httpx.Client):
@@ -20,6 +28,17 @@ class SkyPortal(httpx.Client):
     fetch_sources = sources.fetch_sources
     post_source = sources.post_source
     fetch_profile = profile.fetch_profile
+    fetch_group = groups.fetch_group
+    fetch_groups = groups.fetch_groups
+    fetch_candidate = candidates.fetch_candidate
+    fetch_candidates = candidates.fetch_candidates
+    post_candidate = candidates.post_candidate
+    fetch_photometry = photometry.fetch_photometry
+    post_photometry = photometry.post_photometry
+    fetch_comments = comments.fetch_comments
+    post_comment = comments.post_comment
+    fetch_classifications = classifications.fetch_classifications
+    post_classification = classifications.post_classification
 
 
 def create_client(
