@@ -205,6 +205,51 @@ def post_photometry(
     return PhotometryPostResponse.model_validate(unwrap(response))
 
 
+def upsert_photometry(
+    client: httpx.Client,
+    payload: PhotometryPost,
+    *,
+    refresh: bool = False,
+    duplicate_ignore_flux: bool = False,
+    overwrite_flux: bool = False,
+) -> PhotometryPostResponse:
+    """Upload photometry, updating any points that already exist.
+
+    Unlike :func:`post_photometry`, which fails on a duplicate, this
+    resolves duplicates against the points already stored.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    payload : PhotometryPost
+        The photometry point to upload. If ``group_ids`` is omitted, the
+        server applies its default visibility.
+    refresh : bool, optional
+        Ask the server to push a photometry refresh to any frontend that
+        currently has the source open.
+    duplicate_ignore_flux : bool, optional
+        Match duplicates on ``mjd``, ``instrument_id``, ``filter`` and
+        ``origin`` alone, ignoring flux. Reserved to super admins, since a
+        loose match can overwrite data irrecoverably.
+    overwrite_flux : bool, optional
+        Replace the flux of matched duplicates with the uploaded values.
+        Only applies together with ``duplicate_ignore_flux``, and only to
+        points that already carry an origin.
+    """
+    params: dict[str, bool] = {
+        "refresh": refresh,
+        "duplicate_ignore_flux": duplicate_ignore_flux,
+        "overwrite_flux": overwrite_flux,
+    }
+    response = client.put(
+        "/api/photometry",
+        params=params,
+        json=payload.model_dump(exclude_none=True),
+    )
+    return PhotometryPostResponse.model_validate(unwrap(response))
+
+
 def fetch_photometry_point(
     client: httpx.Client,
     photometry_id: int,

@@ -413,6 +413,7 @@ class SkyPortal(httpx.Client):
     delete_photometric_series = photometric_series.delete_photometric_series
     fetch_photometry = photometry.fetch_photometry
     post_photometry = photometry.post_photometry
+    upsert_photometry = photometry.upsert_photometry
     fetch_photometry_point = photometry.fetch_photometry_point
     delete_photometry = photometry.delete_photometry
     update_photometry = photometry.update_photometry
