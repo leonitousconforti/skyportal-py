@@ -98,3 +98,16 @@ def post_spectrum(client: httpx.Client, payload: SpectrumPost) -> SpectrumPostRe
     """
     response = client.post("/api/spectrum", json=payload.model_dump(exclude_none=True))
     return SpectrumPostResponse.model_validate(unwrap(response))
+
+
+def delete_spectrum(client: httpx.Client, spectrum_id: int) -> None:
+    """Delete a spectrum.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    spectrum_id : int
+        ID of the spectrum to delete.
+    """
+    unwrap(client.delete(f"/api/spectrum/{spectrum_id}"))

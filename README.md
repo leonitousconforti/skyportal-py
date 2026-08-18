@@ -37,6 +37,32 @@ cameras = client.fetch_instruments()  # -> list[Instrument]
 schemes = client.fetch_taxonomies()  # -> list[Taxonomy]
 alert_filters = client.fetch_filters()  # -> list[Filter]
 people = client.fetch_users()  # -> UsersPage
+feeds = client.fetch_streams()  # -> list[Stream]
+
+# follow-up requests and observing runs
+from skyportal_py import followup_requests, observing_runs
+
+time = client.fetch_allocations(instrument_id=2)  # -> list[Allocation]
+pending = client.fetch_followup_requests(status="pending")  # -> FollowupRequestsPage
+client.post_followup_request(
+    followup_requests.FollowupRequestPost(
+        obj_id="ZTF20abcdef",
+        allocation_id=1,
+        payload={"priority": 3, "exposure_time": 300},
+    )
+)
+runs = client.fetch_observing_runs()  # -> list[ObservingRun]
+client.post_observing_run(
+    observing_runs.ObservingRunPost(instrument_id=2, calendar_date="2026-09-01")
+)
+
+# updating and deleting
+client.update_source("ZTF20abcdef", redshift=0.123)
+client.update_comment("ZTF20abcdef", comment_id=42, text="actually a SN IIn")
+client.delete_comment("ZTF20abcdef", comment_id=42)
+client.delete_classification(7)
+client.delete_photometry(1234)
+client.delete_spectrum(56)
 
 # equivalently, call the functions directly with any httpx.Client:
 source = sources.fetch_source(client, "ZTF20abcdef")

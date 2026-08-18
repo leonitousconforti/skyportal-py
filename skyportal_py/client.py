@@ -5,17 +5,21 @@ from __future__ import annotations
 import httpx
 
 from skyportal_py import (
+    allocations,
     annotations,
     candidates,
     classifications,
     comments,
     filters,
+    followup_requests,
     groups,
     instruments,
+    observing_runs,
     photometry,
     profile,
     sources,
     spectra,
+    streams,
     taxonomies,
     telescopes,
     users,
@@ -34,6 +38,7 @@ class SkyPortal(httpx.Client):
     fetch_source = sources.fetch_source
     fetch_sources = sources.fetch_sources
     post_source = sources.post_source
+    update_source = sources.update_source
     fetch_profile = profile.fetch_profile
     fetch_group = groups.fetch_group
     fetch_groups = groups.fetch_groups
@@ -41,14 +46,20 @@ class SkyPortal(httpx.Client):
     fetch_candidates = candidates.fetch_candidates
     post_candidate = candidates.post_candidate
     fetch_photometry = photometry.fetch_photometry
+    fetch_photometry_point = photometry.fetch_photometry_point
     post_photometry = photometry.post_photometry
+    delete_photometry = photometry.delete_photometry
     fetch_comments = comments.fetch_comments
     post_comment = comments.post_comment
+    update_comment = comments.update_comment
+    delete_comment = comments.delete_comment
     fetch_classifications = classifications.fetch_classifications
     post_classification = classifications.post_classification
+    delete_classification = classifications.delete_classification
     fetch_spectrum = spectra.fetch_spectrum
     fetch_spectra = spectra.fetch_spectra
     post_spectrum = spectra.post_spectrum
+    delete_spectrum = spectra.delete_spectrum
     fetch_instrument = instruments.fetch_instrument
     fetch_instruments = instruments.fetch_instruments
     fetch_telescope = telescopes.fetch_telescope
@@ -59,8 +70,22 @@ class SkyPortal(httpx.Client):
     fetch_filters = filters.fetch_filters
     fetch_annotations = annotations.fetch_annotations
     post_annotation = annotations.post_annotation
+    update_annotation = annotations.update_annotation
+    delete_annotation = annotations.delete_annotation
     fetch_user = users.fetch_user
     fetch_users = users.fetch_users
+    fetch_allocation = allocations.fetch_allocation
+    fetch_allocations = allocations.fetch_allocations
+    fetch_followup_request = followup_requests.fetch_followup_request
+    fetch_followup_requests = followup_requests.fetch_followup_requests
+    post_followup_request = followup_requests.post_followup_request
+    delete_followup_request = followup_requests.delete_followup_request
+    fetch_stream = streams.fetch_stream
+    fetch_streams = streams.fetch_streams
+    fetch_observing_run = observing_runs.fetch_observing_run
+    fetch_observing_runs = observing_runs.fetch_observing_runs
+    post_observing_run = observing_runs.post_observing_run
+    delete_observing_run = observing_runs.delete_observing_run
 
 
 def create_client(

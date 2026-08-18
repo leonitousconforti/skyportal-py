@@ -104,3 +104,43 @@ def post_photometry(
         "/api/photometry", json=payload.model_dump(exclude_none=True)
     )
     return PhotometryPostResponse.model_validate(unwrap(response))
+
+
+def fetch_photometry_point(
+    client: httpx.Client,
+    photometry_id: int,
+    *,
+    format: str = "mag",  # noqa: A002 -- mirrors the endpoint's query parameter
+    magsys: str = "ab",
+) -> PhotometryPoint:
+    """Retrieve a single photometry point by ID.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    photometry_id : int
+        ID of the photometry point.
+    format : str, optional
+        Return the point in ``"mag"`` or ``"flux"`` space.
+    magsys : str, optional
+        Magnitude system, ``"ab"`` or ``"vega"``.
+    """
+    response = client.get(
+        f"/api/photometry/{photometry_id}",
+        params={"format": format, "magsys": magsys},
+    )
+    return PhotometryPoint.model_validate(unwrap(response))
+
+
+def delete_photometry(client: httpx.Client, photometry_id: int) -> None:
+    """Delete a photometry point.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    photometry_id : int
+        ID of the photometry point to delete.
+    """
+    unwrap(client.delete(f"/api/photometry/{photometry_id}"))

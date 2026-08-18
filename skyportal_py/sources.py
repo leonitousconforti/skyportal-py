@@ -131,3 +131,31 @@ def post_source(client: httpx.Client, payload: SourcePost) -> SourcePostResponse
     """
     response = client.post("/api/sources", json=payload.model_dump(exclude_none=True))
     return SourcePostResponse.model_validate(unwrap(response))
+
+
+def update_source(
+    client: httpx.Client,
+    obj_id: str,
+    *,
+    ra: float | None = None,
+    dec: float | None = None,
+    redshift: float | None = None,
+) -> None:
+    """Update fields of an existing source.
+
+    Only the provided fields are sent; omitted fields are left unchanged.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    obj_id : str
+        Object ID of the source to update.
+    ra, dec : float, optional
+        New coordinates, in degrees.
+    redshift : float, optional
+        New redshift.
+    """
+    fields = {"ra": ra, "dec": dec, "redshift": redshift}
+    payload = {name: value for name, value in fields.items() if value is not None}
+    unwrap(client.patch(f"/api/sources/{obj_id}", json=payload))

@@ -72,3 +72,48 @@ def post_comment(
         payload["group_ids"] = group_ids
     response = client.post(f"/api/sources/{obj_id}/comments", json=payload)
     return CommentPostResponse.model_validate(unwrap(response))
+
+
+def update_comment(
+    client: httpx.Client,
+    obj_id: str,
+    comment_id: int,
+    text: str,
+    *,
+    group_ids: list[int] | None = None,
+) -> None:
+    """Update a comment on a source.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    obj_id : str
+        Object ID of the commented source.
+    comment_id : int
+        ID of the comment to update.
+    text : str
+        The new comment text.
+    group_ids : list of int, optional
+        Restrict the comment's visibility to these groups. If omitted, the
+        visibility is left unchanged.
+    """
+    payload: dict[str, str | list[int]] = {"text": text}
+    if group_ids is not None:
+        payload["group_ids"] = group_ids
+    unwrap(client.put(f"/api/sources/{obj_id}/comments/{comment_id}", json=payload))
+
+
+def delete_comment(client: httpx.Client, obj_id: str, comment_id: int) -> None:
+    """Delete a comment on a source.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    obj_id : str
+        Object ID of the commented source.
+    comment_id : int
+        ID of the comment to delete.
+    """
+    unwrap(client.delete(f"/api/sources/{obj_id}/comments/{comment_id}"))

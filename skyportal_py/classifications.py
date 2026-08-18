@@ -76,3 +76,16 @@ def post_classification(
         "/api/classification", json=payload.model_dump(exclude_none=True)
     )
     return ClassificationPostResponse.model_validate(unwrap(response))
+
+
+def delete_classification(client: httpx.Client, classification_id: int) -> None:
+    """Delete a classification.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    classification_id : int
+        ID of the classification to delete.
+    """
+    unwrap(client.delete(f"/api/classification/{classification_id}"))
