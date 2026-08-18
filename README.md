@@ -109,7 +109,8 @@ The dev environment is managed with [nix](https://nixos.org) and
 
 ```sh
 nix develop  # or `direnv allow` with nix-direnv
-uv run pytest
+uv run ruff format
 uv run ruff check
 uv run ty check
+uv run pytest
 ```
