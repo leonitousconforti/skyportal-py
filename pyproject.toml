@@ -21,7 +21,7 @@ source = "https://github.com/leonitousconforti/skyportal-py"
 
 [dependency-groups]
 dev = ["ruff", "towncrier", "ty"]
-test = ["pytest", "respx"]
+test = ["pytest"]
 
 [tool.uv]
 default-groups = ["dev", "test"]

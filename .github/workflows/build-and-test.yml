@@ -19,8 +19,37 @@ jobs:
       - run: uv run --no-sync ruff format --check
       - run: uv run --no-sync ty check
 
+  # Builds the SkyPortal web image once per pinned ref (set in the script)
+  # and caches it in GHCR, so the test matrix jobs only pull.
+  skyportal-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Ensure SkyPortal image
+        run: scripts/integration-up.sh image
+        env:
+          SKYPORTAL_IMAGE_REPO: ghcr.io/${{ github.repository }}/skyportal-web
+
+      - name: Push SkyPortal image to GHCR cache
+        if: env.SKYPORTAL_IMAGE_BUILT == 'true'
+        continue-on-error: true # forks have a read-only token
+        run: docker push "$SKYPORTAL_IMAGE"
+
   test:
     runs-on: ubuntu-latest
+    needs: skyportal-image
+    timeout-minutes: 90 # rebuild headroom for forks, which cannot pull the cache
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -33,4 +62,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - run: uv sync --locked --group test
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Start SkyPortal
+        run: scripts/integration-up.sh
+        env:
+          SKYPORTAL_IMAGE_REPO: ghcr.io/${{ github.repository }}/skyportal-web
+
       - run: uv run --no-sync pytest
+
+      - name: SkyPortal logs on failure
+        if: failure()
+        run: cd .skyportal && docker compose logs --tail 200 db-init web || true
