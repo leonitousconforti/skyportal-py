@@ -91,8 +91,8 @@ SkyPortal API resource, and every function on it maps to one HTTP verb on one
 route. Import the module to see what is available (`from skyportal_py import
 gcn_events`), or call the bound method on the client.
 
-All models are strict (`extra="forbid"`): a field the model does not declare
-fails validation. Error responses raise `SkyPortalError`
+All models use `extra="forbid"`: unknown fields in request payloads and
+server responses raise a validation error. Error responses raise `SkyPortalError`
 with the server's message and HTTP status code. For endpoints without a typed
 function yet, use the httpx client directly and `unwrap` the envelope:
 

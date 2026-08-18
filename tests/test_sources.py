@@ -34,6 +34,7 @@ def test_fetch_source(client: SkyPortal) -> None:
     assert source.id == "ZTF20abcdef"
     assert source.ra == 10.5
     assert source.groups[0].name == "Program A"
+    assert source.redshift == 0.1
 
     # the same endpoint function is also bound as a method on the client
     assert client.fetch_source("ZTF20abcdef") == source
