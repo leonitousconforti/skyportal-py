@@ -7,6 +7,16 @@ from typing import Any
 import httpx
 
 
+class _Unset:
+    """Sentinel distinguishing "argument not provided" from an explicit None."""
+
+    def __repr__(self) -> str:
+        return "UNSET"
+
+
+UNSET: Any = _Unset()
+
+
 class SkyPortalError(Exception):
     """Raised when the SkyPortal API returns an error response."""
 

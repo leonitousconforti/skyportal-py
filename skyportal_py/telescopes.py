@@ -67,15 +67,39 @@ class Telescope(BaseModel):
     evening: str | bool | None = None
 
 
-def fetch_telescopes(client: httpx.Client) -> list[Telescope]:
-    """Retrieve all telescopes.
+def fetch_telescopes(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
+    client: httpx.Client,
+    *,
+    name: str | None = None,
+    latitude_min: float | None = None,
+    latitude_max: float | None = None,
+    longitude_min: float | None = None,
+    longitude_max: float | None = None,
+) -> list[Telescope]:
+    """Retrieve telescopes, optionally filtered by name or location box.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
+    name : str, optional
+        Exact telescope name to match.
+    latitude_min, latitude_max : float, optional
+        Keep telescopes whose latitude lies in this range, in degrees.
+    longitude_min, longitude_max : float, optional
+        Keep telescopes whose longitude lies in this range, in degrees.
     """
-    response = client.get("/api/telescope")
+    params = {
+        "name": name,
+        "latitudeMin": latitude_min,
+        "latitudeMax": latitude_max,
+        "longitudeMin": longitude_min,
+        "longitudeMax": longitude_max,
+    }
+    response = client.get(
+        "/api/telescope",
+        params={key: value for key, value in params.items() if value is not None},
+    )
     return [Telescope.model_validate(item) for item in unwrap(response)]
 
 

@@ -63,3 +63,41 @@ class UserProfile(BaseModel):
 def fetch_profile(client: httpx.Client) -> UserProfile:
     """Retrieve the profile of the user associated with the token."""
     return UserProfile.model_validate(unwrap(client.get("/api/internal/profile")))
+
+
+class ProfilePatch(BaseModel):
+    """Payload for updating the token user's profile and preferences."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    affiliations: list[str] | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
+    bio: str | None = None
+    is_bot: bool | None = None
+    preferences: dict[str, Any] | None = None
+
+
+def update_profile(client: httpx.Client, payload: ProfilePatch) -> None:
+    """Update the profile of the user associated with the token.
+
+    Only the provided fields are sent; omitted fields are left unchanged.
+    ``preferences`` is merged into the stored preferences dict rather than
+    replacing it.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    payload : ProfilePatch
+        The fields to change.
+    """
+    unwrap(
+        client.patch(
+            "/api/internal/profile",
+            json=payload.model_dump(exclude_none=True),
+        )
+    )

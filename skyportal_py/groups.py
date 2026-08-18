@@ -146,7 +146,12 @@ def fetch_groups(
     return GroupsResponse.model_validate(unwrap(response))
 
 
-def fetch_group(client: httpx.Client, group_id: int) -> Group:
+def fetch_group(
+    client: httpx.Client,
+    group_id: int,
+    *,
+    include_group_users: bool = True,
+) -> Group:
     """Retrieve a single group by ID.
 
     Parameters
@@ -155,9 +160,32 @@ def fetch_group(client: httpx.Client, group_id: int) -> Group:
         Client from :func:`skyportal_py.create_client`.
     group_id : int
         ID of the group.
+    include_group_users : bool, optional
+        Include the group's members in ``users``. On by default; pass False
+        to skip the member list on large groups.
     """
-    response = client.get(f"/api/groups/{group_id}")
+    response = client.get(
+        f"/api/groups/{group_id}",
+        params={"includeGroupUsers": include_group_users},
+    )
     return Group.model_validate(unwrap(response))
+
+
+def fetch_groups_by_name(client: httpx.Client, name: str) -> list[Group]:
+    """Retrieve the accessible groups with an exact name.
+
+    The ``name=`` form of ``GET /api/groups`` returns a plain list rather
+    than the user/accessible split of :func:`fetch_groups`.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    name : str
+        Exact group name to match.
+    """
+    response = client.get("/api/groups", params={"name": name})
+    return [Group.model_validate(group) for group in unwrap(response)]
 
 
 def post_group(client: httpx.Client, payload: GroupPost) -> GroupPostResponse:

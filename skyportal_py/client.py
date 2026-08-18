@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 
 from skyportal_py import (
@@ -275,6 +277,7 @@ class SkyPortal(httpx.Client):
         group_admission_requests.delete_group_admission_request
     )
     fetch_groups = groups.fetch_groups
+    fetch_groups_by_name = groups.fetch_groups_by_name
     fetch_group = groups.fetch_group
     post_group = groups.post_group
     update_group = groups.update_group
@@ -424,6 +427,7 @@ class SkyPortal(httpx.Client):
     update_photometry_validation = photometry.update_photometry_validation
     delete_photometry_validation = photometry.delete_photometry_validation
     fetch_profile = profile.fetch_profile
+    update_profile = profile.update_profile
     fetch_public_source_pages = public_pages.fetch_public_source_pages
     post_public_source_page = public_pages.post_public_source_page
     delete_public_source_page = public_pages.delete_public_source_page
@@ -597,7 +601,8 @@ def create_client(
     base_url: str,
     token: str | None = None,
     *,
-    timeout: float = 30.0,
+    timeout: float | None = 30.0,
+    **httpx_kwargs: Any,  # noqa: ANN401 -- forwarded verbatim to httpx.Client
 ) -> SkyPortal:
     """Create a client configured for a SkyPortal instance.
 
@@ -611,8 +616,13 @@ def create_client(
     token : str, optional
         API token from your SkyPortal profile page. Omit for anonymous
         access to instances that allow it.
-    timeout : float, optional
-        Timeout in seconds applied to every request.
+    timeout : float or None, optional
+        Timeout in seconds applied to every request; None disables it.
+    **httpx_kwargs
+        Remaining ``httpx.Client`` options, e.g. ``trust_env=False`` to keep
+        a netrc entry from overriding the token header.
     """
     headers = {} if token is None else {"Authorization": f"token {token}"}
-    return SkyPortal(base_url=base_url, headers=headers, timeout=timeout)
+    return SkyPortal(
+        base_url=base_url, headers=headers, timeout=timeout, **httpx_kwargs
+    )
