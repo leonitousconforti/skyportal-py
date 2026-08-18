@@ -28,13 +28,5 @@ requirement by adding the `skip-changelog` label to the pull request.
 
 ## Releasing
 
-    towncrier build --version <X.Y.Z>
-
-This inserts a new section into `CHANGES.md`, deletes the consumed fragments,
-and stages everything for commit. Then commit, tag `v<X.Y.Z>` (the version
-comes from the git tag via setuptools_scm), and create a GitHub release to
-trigger the PyPI upload.
-
-To preview the next release without changing anything:
-
-    towncrier build --draft --version <X.Y.Z>
+See [RELEASING.md](../RELEASING.md) at the repository root for the full
+release steps.
