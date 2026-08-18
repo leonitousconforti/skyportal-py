@@ -1,71 +1,60 @@
-"""Tests for the SkyPortal client."""
+"""Tests for the shared HTTP plumbing."""
 
 from __future__ import annotations
 
+import httpx
 import pytest
-import responses
+import respx
 
-from skyportal_py import SkyPortal, SkyPortalError
+from skyportal_py import SkyPortalError, create_client, unwrap
 
 BASE_URL = "https://skyportal.example.com"
 
 
-@pytest.fixture
-def client() -> SkyPortal:
-    """Return a client pointed at a fake instance."""
-    return SkyPortal(BASE_URL, token="abc123")
-
-
-@responses.activate
-def test_get_unwraps_data(client: SkyPortal) -> None:
-    """A successful response returns only the data field."""
-    responses.get(
-        f"{BASE_URL}/api/sources",
-        json={"status": "success", "data": {"sources": [], "totalMatches": 0}},
+@respx.mock
+def test_client_sends_token_and_base_url(client: httpx.Client) -> None:
+    """The client joins paths onto the base URL and sends the token header."""
+    route = respx.get(f"{BASE_URL}/api/internal/profile").mock(
+        return_value=httpx.Response(
+            200, json={"status": "success", "data": {"username": "leo"}}
+        )
     )
-    assert client.get("sources") == {"sources": [], "totalMatches": 0}
-
-
-@responses.activate
-def test_token_header_and_api_prefix(client: SkyPortal) -> None:
-    """The token header is sent and the api/ prefix is optional."""
-    route = responses.get(
-        f"{BASE_URL}/api/internal/profile",
-        json={"status": "success", "data": {"username": "leo"}},
-    )
-    assert client.whoami() == {"username": "leo"}
+    client.get("/api/internal/profile")
     assert route.calls[0].request.headers["Authorization"] == "token abc123"
 
 
-@responses.activate
-def test_error_raises(client: SkyPortal) -> None:
+@respx.mock
+def test_anonymous_client_sends_no_auth_header() -> None:
+    """Omitting the token creates a client without an Authorization header."""
+    route = respx.get(f"{BASE_URL}/api/sources").mock(
+        return_value=httpx.Response(
+            200, json={"status": "success", "data": {"sources": []}}
+        )
+    )
+    create_client(BASE_URL).get("/api/sources")
+    assert "Authorization" not in route.calls[0].request.headers
+
+
+def test_unwrap_returns_data() -> None:
+    """A success envelope unwraps to its data field."""
+    response = httpx.Response(
+        200, json={"status": "success", "data": {"sources": [], "totalMatches": 0}}
+    )
+    assert unwrap(response) == {"sources": [], "totalMatches": 0}
+
+
+def test_unwrap_error_raises() -> None:
     """An error envelope raises SkyPortalError with the server message."""
-    responses.get(
-        f"{BASE_URL}/api/sources/ZTF20abcdef",
-        json={"status": "error", "message": "Invalid source ID"},
-        status=400,
+    response = httpx.Response(
+        400, json={"status": "error", "message": "Invalid source ID"}
     )
     with pytest.raises(SkyPortalError, match="Invalid source ID") as excinfo:
-        client.get("/sources/ZTF20abcdef")
+        unwrap(response)
     assert excinfo.value.status_code == 400
 
 
-@responses.activate
-def test_non_json_response_raises(client: SkyPortal) -> None:
+def test_unwrap_non_json_raises() -> None:
     """A non-JSON response raises SkyPortalError instead of ValueError."""
-    responses.get(
-        f"{BASE_URL}/api/sources", body="<html>proxy error</html>", status=502
-    )
+    response = httpx.Response(502, text="<html>proxy error</html>")
     with pytest.raises(SkyPortalError, match="non-JSON"):
-        client.get("sources")
-
-
-@responses.activate
-def test_post_sends_json_body(client: SkyPortal) -> None:
-    """POST forwards the JSON body."""
-    route = responses.post(
-        f"{BASE_URL}/api/comment",
-        json={"status": "success", "data": {"comment_id": 1}},
-    )
-    assert client.post("comment", json={"text": "hi"}) == {"comment_id": 1}
-    assert route.calls[0].request.body == b'{"text": "hi"}'
+        unwrap(response)
