@@ -2,29 +2,81 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.photometry import PhotometryPoint
 from skyportal_py.streams import Stream
+
+#: The registered ``BrokerAPI`` provider classes (upstream ``BROKERS``).
+BrokerClassname = Literal[
+    "GENERICBROKER",
+    "LASAIRBROKER",
+    "BABAMULBROKER",
+    "BOOMBROKER",
+    "FINKBROKER",
+    "ALERCEBROKER",
+    "ANTARESBROKER",
+    "PITTGOOGLEBROKER",
+    "AMPELBROKER",
+]
+
+#: How a provider models filters, so a client can pick an editor.
+BrokerFilterKind = Literal["pipeline", "query", "tags", "none"]
+
+
+class BrokerCapabilities(BaseModel):
+    """What a broker's provider class implements (upstream ``implements()``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query_alerts: bool | None = None
+    get_alert: bool | None = None
+    get_cutouts: bool | None = None
+    cone_search: bool | None = None
+    get_filters: bool | None = None
+    create_filter: bool | None = None
+    update_filter: bool | None = None
+    delete_filter: bool | None = None
+    test_filter: bool | None = None
+    validate_filter: bool | None = None
+    filter_modules: bool | None = None
+    run_ingestion: bool | None = None
+    validate_config: bool | None = None
+    test_connection: bool | None = None
+    save_as_source: bool | None = None
+    get_photometry: bool | None = None
+    # Data-semantics flags rather than methods: whether ``cone_search``
+    # returns reference catalogs, and the dialect ``test_filter`` expects its
+    # pipeline in (``None`` when the provider takes no pipeline at all).
+    cross_match_catalogs: bool | None = None
+    filter_pipeline: str | None = None
 
 
 class Broker(BaseModel):
-    """A configured connection to an external alert broker."""
+    """A configured connection to an external alert broker (upstream ``Broker``).
+
+    The endpoints hand-build this dict rather than calling ``to_dict()``, so
+    ``created_at``/``modified`` are never returned even though the upstream row
+    carries them. ``altdata`` is only present for system admins, with the
+    provider's secret config fields stripped out.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str | None = None
-    broker_classname: str | None = None
+    broker_classname: BrokerClassname | None = None
     active: bool | None = None
     default_alert_search: bool | None = None
     default_crossmatch: bool | None = None
-    capabilities: dict[str, Any] = Field(default_factory=dict)
+    capabilities: BrokerCapabilities | None = None
     surveys: list[str] = Field(default_factory=list)
-    filter_kind: str | None = None
+    filter_kind: BrokerFilterKind | None = None
+    # Free-form per-instance provider configuration (endpoints, credentials).
     altdata: dict[str, Any] | None = None
 
 
@@ -34,7 +86,7 @@ class BrokerPost(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    broker_classname: str
+    broker_classname: BrokerClassname
     altdata: dict[str, Any] | None = None
     active: bool | None = None
     default_alert_search: bool | None = None
@@ -49,8 +101,25 @@ class BrokerPostResponse(BaseModel):
     id: int
 
 
+class BrokerFilterVersion(BaseModel):
+    """One editable version of a broker filter, as stored on the filter row."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fid: str | int | None = None
+    # The version tree the broker's own filter language defines; skyportal
+    # stores it verbatim, so its shape is the provider's, not skyportal's.
+    version: Any = None
+
+
 class BrokerFilter(BaseModel):
-    """A skyportal filter as listed by the broker endpoints."""
+    """A skyportal ``Filter`` as listed by the broker endpoints.
+
+    The handlers hand-build this dict, so it carries a strict subset of the
+    upstream ``Filter`` columns and never ``created_at``/``modified``.
+    ``altdata`` stays free-form: it holds the broker-side ids and the compiled
+    native filter, whose shape the broker defines.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -64,7 +133,14 @@ class BrokerFilter(BaseModel):
 
 
 class BrokerFilterDetail(BaseModel):
-    """A broker filter enriched with its broker-side versions and state."""
+    """A broker filter enriched with its broker-side versions and state.
+
+    ``stream`` is trimmed by the handler to the stream's ``id`` and ``name``.
+    ``fv`` comes straight back from the broker, so its entries are shaped by
+    the provider rather than by skyportal. The ``fv``/``active_fid``/
+    ``active``/``filters`` block is dropped entirely when the broker is
+    unreachable or the filter has no broker-side counterpart.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -78,7 +154,7 @@ class BrokerFilterDetail(BaseModel):
     fv: list[dict[str, Any]] | None = None
     active_fid: str | int | None = None
     active: bool | None = None
-    filters: list[dict[str, Any]] | None = None
+    filters: list[BrokerFilterVersion] | None = None
 
 
 class BrokerFiltersPage(BaseModel):
@@ -376,7 +452,7 @@ def fetch_broker_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query pa
     fmt: str = "mag",
     magsys: str = "ab",
     refresh: bool = False,
-) -> list[dict[str, Any]]:
+) -> list[PhotometryPoint]:
     """Retrieve an object's photometry merged with the broker's.
 
     The persisted, access-controlled database photometry is merged with
@@ -413,7 +489,7 @@ def fetch_broker_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query pa
         f"/api/brokers/{broker_id}/alerts/{alert_id}/photometry",
         params=params,
     )
-    return list(unwrap(response))
+    return [PhotometryPoint.model_validate(item) for item in unwrap(response)]
 
 
 def fetch_broker_survey_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
@@ -424,7 +500,7 @@ def fetch_broker_survey_photometry(  # noqa: PLR0913 -- mirrors the endpoint's q
     fmt: str = "mag",
     magsys: str = "ab",
     refresh: bool = False,
-) -> list[dict[str, Any]]:
+) -> list[PhotometryPoint]:
     """Retrieve an object's photometry via the survey's own broker.
 
     Broker-address-free variant of :func:`fetch_broker_photometry`: the
@@ -454,7 +530,7 @@ def fetch_broker_survey_photometry(  # noqa: PLR0913 -- mirrors the endpoint's q
         "refresh": refresh,
     }
     response = client.get(f"/api/brokers/photometry/{object_id}", params=params)
-    return list(unwrap(response))
+    return [PhotometryPoint.model_validate(item) for item in unwrap(response)]
 
 
 def post_broker_alert_save(

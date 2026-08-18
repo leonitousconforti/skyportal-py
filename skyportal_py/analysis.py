@@ -2,23 +2,55 @@
 
 from __future__ import annotations
 
-from typing import Any
+import datetime
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap, unwrap_content
 from skyportal_py.groups import Group
+from skyportal_py.users import User
+
+AnalysisType = Literal["lightcurve_fitting", "spectrum_fitting", "meta_analysis"]
+AnalysisInputType = Literal[
+    "photometry",
+    "spectra",
+    "redshift",
+    "annotations",
+    "comments",
+    "classifications",
+]
+AuthenticationType = Literal[
+    "none",
+    "header_token",
+    "api_key",
+    "HTTPBasicAuth",
+    "HTTPDigestAuth",
+    "OAuth1",
+]
+WebhookStatus = Literal[
+    "queued",
+    "pending",
+    "completed",
+    "failure",
+    "cancelled",
+    "timed_out",
+]
 
 
 class AnalysisService(BaseModel):
-    """An external analysis service registered with SkyPortal."""
+    """An external analysis service (upstream ``AnalysisService``)."""
+
+    # ``_authinfo`` is an underscore-prefixed column and so is never part of
+    # ``to_dict()``; the ``obj_analyses`` and ``default_analyses`` backrefs are
+    # never eager-loaded by the handlers.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     name: str | None = None
     display_name: str | None = None
     description: str | None = None
@@ -27,10 +59,10 @@ class AnalysisService(BaseModel):
     contact_email: str | None = None
     url: str | None = None
     optional_analysis_parameters: dict[str, Any] | str | None = None
-    authentication_type: str | None = None
+    authentication_type: AuthenticationType | None = None
     enabled: bool | None = None
-    analysis_type: str | None = None
-    input_data_types: list[str] = Field(default_factory=list)
+    analysis_type: AnalysisType | None = None
+    input_data_types: list[AnalysisInputType] = Field(default_factory=list)
     timeout: float | None = None
     upload_only: bool | None = None
     display_on_resource_dropdown: bool | None = None
@@ -45,9 +77,9 @@ class AnalysisServicePost(BaseModel):
 
     name: str
     url: str
-    authentication_type: str
-    analysis_type: str
-    input_data_types: list[str]
+    authentication_type: AuthenticationType
+    analysis_type: AnalysisType
+    input_data_types: list[AnalysisInputType]
     display_name: str | None = None
     description: str | None = None
     version: str | None = None
@@ -57,6 +89,7 @@ class AnalysisServicePost(BaseModel):
     authinfo: str | None = Field(alias="_authinfo", default=None)
     enabled: bool | None = None
     timeout: float | None = None
+    upload_only: bool | None = None
     is_summary: bool | None = None
     display_on_resource_dropdown: bool | None = None
     group_ids: list[int] | None = None
@@ -69,9 +102,9 @@ class AnalysisServiceUpdate(BaseModel):
 
     name: str | None = None
     url: str | None = None
-    authentication_type: str | None = None
-    analysis_type: str | None = None
-    input_data_types: list[str] | None = None
+    authentication_type: AuthenticationType | None = None
+    analysis_type: AnalysisType | None = None
+    input_data_types: list[AnalysisInputType] | None = None
     display_name: str | None = None
     description: str | None = None
     version: str | None = None
@@ -81,6 +114,7 @@ class AnalysisServiceUpdate(BaseModel):
     authinfo: dict[str, Any] | None = None
     enabled: bool | None = None
     timeout: float | None = None
+    upload_only: bool | None = None
     is_summary: bool | None = None
     display_on_resource_dropdown: bool | None = None
     group_ids: list[int] | None = None
@@ -95,13 +129,27 @@ class AnalysisServicePostResponse(BaseModel):
 
 
 class ObjAnalysis(BaseModel):
-    """An analysis run on an object."""
+    """An analysis run on an object (upstream ``ObjAnalysis``)."""
+
+    # ``_unique_id`` and ``_full_name`` are underscore-prefixed columns and so
+    # never appear in ``to_dict()``; ``_full_name`` is surfaced separately as
+    # ``filename`` when ``includeFilename`` is set. ``obj`` stays untyped-out
+    # because :mod:`skyportal_py.sources` imports this module, and it is never
+    # eager-loaded anyway.
+    #
+    # ``analysis_service_name``, ``analysis_service_description``,
+    # ``num_plots``, ``filename``, ``data``, ``model_lightcurve``,
+    # ``model_lightcurves``, ``model_name`` and ``n_detections`` are injected by
+    # the handler rather than being columns. The listing endpoint without
+    # ``objID`` returns only ``id``, ``obj_id``, ``status``, ``status_message``,
+    # ``created_at``, ``last_activity`` and ``analysis_service_id`` (plus the
+    # two service-name keys).
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     obj_id: str | None = None
     author_id: int | None = None
     analysis_service_id: int | None = None
@@ -111,19 +159,19 @@ class ObjAnalysis(BaseModel):
     show_corner: bool | None = None
     analysis_parameters: dict[str, Any] | None = None
     input_filters: dict[str, Any] | None = None
-    invalid_after: str | None = None
+    invalid_after: datetime.datetime | None = None
     token: str | None = None
     handled_by_url: str | None = None
-    status: str | None = None
+    status: WebhookStatus | None = None
     status_message: str | None = None
     duration: float | None = None
-    last_activity: str | None = None
+    last_activity: datetime.datetime | None = None
     analysis_service_name: str | None = None
     analysis_service_description: str | None = None
     num_plots: int | None = None
     filename: str | None = None
     groups: list[Group] = Field(default_factory=list)
-    data: Any = None
+    data: dict[str, Any] | None = None
     model_lightcurve: Any = None
     model_lightcurves: Any = None
     model_name: str | None = None
@@ -174,13 +222,15 @@ class AnalysisUploadResponse(BaseModel):
 
 
 class DefaultAnalysis(BaseModel):
-    """A default analysis triggered automatically on matching sources."""
+    """A default analysis (upstream ``DefaultAnalysis``)."""
+
+    # The handler eager-loads ``groups``, ``author`` and ``analysis_service``.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     analysis_service_id: int | None = None
     author_id: int | None = None
     show_parameters: bool | None = None
@@ -190,7 +240,7 @@ class DefaultAnalysis(BaseModel):
     source_filter: dict[str, Any] | None = None
     stats: dict[str, Any] | None = None
     groups: list[Group] = Field(default_factory=list)
-    author: dict[str, Any] | None = None
+    author: User | None = None
     analysis_service: AnalysisService | None = None
 
 

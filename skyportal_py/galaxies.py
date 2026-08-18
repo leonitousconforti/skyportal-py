@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 import httpx
@@ -11,13 +12,16 @@ from skyportal_py._http import unwrap
 
 
 class Galaxy(BaseModel):
-    """A galaxy from a galaxy catalog."""
+    """A galaxy from a galaxy catalog (upstream ``Galaxy``)."""
+
+    # ``objects`` (the ``Obj``s this galaxy is the host of) stays as raw dicts:
+    # ``sources.Source`` nests ``Galaxy``, so typing it would be a cycle.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     catalog_id: int | None = None
     name: str | None = None
     alt_name: str | None = None
@@ -43,11 +47,17 @@ class Galaxy(BaseModel):
     b2a: float | None = None
     pa: float | None = None
     btc: float | None = None
+    objects: list[dict[str, Any]] | None = None
+    # Injected by the handler when ``returnProbability`` is requested.
     probability: float | None = None
 
 
 class GalaxiesPage(BaseModel):
     """One page of results from a galaxy catalog query."""
+
+    # Hand-built by the handler, which strips keys whose value is ``None``, so
+    # ``sortBy``/``sortOrder`` are absent unless they were requested and
+    # ``geojson`` is only present when ``includeGeoJSON`` was set.
 
     model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
@@ -63,6 +73,9 @@ class GalaxiesPage(BaseModel):
 class GalaxyCatalogCount(BaseModel):
     """A galaxy catalog name with its galaxy count."""
 
+    # Hand-built by the handler from an upstream ``GalaxyCatalog`` plus a count
+    # of its galaxies; the catalog's description and URL are not returned.
+
     model_config = ConfigDict(extra="forbid")
 
     catalog_name: str
@@ -71,6 +84,10 @@ class GalaxyCatalogCount(BaseModel):
 
 class GalaxyCatalogPost(BaseModel):
     """Payload for ingesting a galaxy catalog."""
+
+    # The upstream OpenAPI schema documents ``catalog_data`` as a list of
+    # dicts, but the handler indexes it by column name, so it is really a dict
+    # of equal-length column lists.
 
     model_config = ConfigDict(extra="forbid")
 

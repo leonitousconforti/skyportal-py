@@ -2,227 +2,260 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap, unwrap_content
-from skyportal_py.localizations import Localization
+from skyportal_py.allocations import Allocation
+from skyportal_py.comments import Comment
+from skyportal_py.filters import Filter
+from skyportal_py.groups import Group
+from skyportal_py.localizations import (
+    Localization,
+    LocalizationCenter,
+    LocalizationProperty,
+    LocalizationTag,
+)
 from skyportal_py.mmadetectors import MMADetector
 from skyportal_py.observation_plans import ObservationPlanRequest
+from skyportal_py.reminders import Reminder
+from skyportal_py.sources import Source
+from skyportal_py.survey_efficiency import SurveyEfficiencyForObservations
+from skyportal_py.users import User
+
+# Every model below whose upstream row hangs off a ``GcnEvent`` keeps its
+# ``gcnevent`` back-reference as ``dict[str, Any]``: :class:`GcnEvent` already
+# types the forward direction, so typing the reverse one too would make the
+# models mutually recursive.
 
 
 class GcnNotice(BaseModel):
-    """A GCN notice (VOEvent, JSON or dictionary) attached to an event."""
+    """A GCN notice attached to an event (upstream ``GcnNotice``).
+
+    ``content`` is the raw notice body (XML, JSON or plain text): a
+    ``LargeBinary`` column the server decodes to a string. It is deferred, so
+    it is absent unless the handler undefers it, and the single-event endpoint
+    drops it when ``excludeNoticeContent`` is set.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     sent_by_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime | None = None
     ivorn: str | None = None
     notice_type: str | None = None
     notice_format: str | None = None
     stream: str | None = None
-    date: str | None = None
+    date: datetime | None = None
     content: Any = None
     has_localization: bool | None = None
     localization_ingested: bool | None = None
-    sent_by: dict[str, Any] | None = None
+    sent_by: User | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnProperty(BaseModel):
-    """A set of properties parsed from a GCN event notice."""
+    """Properties parsed from an event notice (upstream ``GcnProperty``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     sent_by_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime | None = None
     data: dict[str, Any] | None = None
-    sent_by: dict[str, Any] | None = None
+    sent_by: User | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnTag(BaseModel):
-    """A tag on a GCN event."""
+    """A qualitative tag on a GCN event (upstream ``GcnTag``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     sent_by_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime | None = None
     text: str | None = None
-    sent_by: dict[str, Any] | None = None
+    sent_by: User | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnSummary(BaseModel):
-    """A human-readable summary of a GCN event."""
+    """A human-readable summary of a GCN event (upstream ``GcnSummary``).
+
+    ``text`` is deferred server-side and is undeferred by the single-summary
+    endpoint; it reads ``"pending"`` until the background writer fills it in.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     sent_by_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime | None = None
     group_id: int | None = None
     title: str | None = None
     text: str | None = None
-    sent_by: dict[str, Any] | None = None
-    group: dict[str, Any] | None = None
+    sent_by: User | None = None
+    group: Group | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnReport(BaseModel):
-    """A structured (publishable) report on a GCN event."""
+    """A structured (publishable) report on a GCN event (upstream ``GcnReport``).
+
+    ``data`` is a deferred JSONB column, undeferred by the single-report
+    endpoint. It holds ``{"status": "pending"}`` (a mapping) while the report
+    is being assembled and a JSON *string* once the background writer has
+    stored the rendered report, so both forms are accepted.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     sent_by_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime | None = None
     group_id: int | None = None
     report_name: str | None = None
-    data: Any = None
+    data: dict[str, Any] | str | None = None
     published: bool | None = None
-    sent_by: dict[str, Any] | None = None
-    group: dict[str, Any] | None = None
+    sent_by: User | None = None
+    group: Group | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnTrigger(BaseModel):
-    """Whether a GCN event triggered a given allocation."""
+    """Whether a GCN event triggered an allocation (upstream ``GcnTrigger``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
-    dateobs: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    dateobs: datetime | None = None
     allocation_id: int | None = None
     triggered: bool | None = None
-    allocation: dict[str, Any] | None = None
+    allocation: Allocation | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnEventUser(BaseModel):
-    """A user assigned as an advocate for a GCN event."""
+    """A user advocating for a GCN event (upstream ``GcnEventUser``).
+
+    ``username``, ``first_name`` and ``last_name`` are copied off the joined
+    user by the single-event endpoint, which returns these rows as
+    ``event_users``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     gcnevent_id: int | None = None
     user_id: int | None = None
     username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    user: dict[str, Any] | None = None
+    user: User | None = None
     gcnevent: dict[str, Any] | None = None
 
 
 class GcnEventLocalization(Localization):
-    """A localization as returned inside a GCN event payload."""
+    """A localization as returned inside a GCN event payload.
 
-    tags: list[dict[str, Any]] | None = None
-    properties: list[dict[str, Any]] | None = None
-    center: Any = None
+    The single-event endpoint replaces the localization's ``tags`` and
+    ``properties`` with explicitly serialized lists and adds ``center``; the
+    paginated endpoint returns ``tags`` only.
+    """
+
+    tags: list[LocalizationTag] | None = None
+    properties: list[LocalizationProperty] | None = None
+    center: LocalizationCenter | None = None
 
 
 class GcnEventCrossmatchState(BaseModel):
-    """Progress of the alert crossmatch for one event/filter/localization."""
+    """Alert-crossmatch progress for one event, filter and localization.
+
+    Upstream ``GcnEventCrossmatchState``. ``status`` is one of ``"pending"``,
+    ``"processing"``, ``"done"`` or ``"failed"``, but the column is a plain
+    string, so it is not narrowed here.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     gcnevent_id: int | None = None
     filter_id: int | None = None
     localization_id: int | None = None
-    last_queried: str | None = None
+    last_queried: datetime | None = None
     last_alert_jd: float | None = None
     status: str | None = None
     error: str | None = None
     archival_done: bool | None = None
     n_matches: int | None = None
     gcnevent: dict[str, Any] | None = None
-    filter: dict[str, Any] | None = None
-    localization: dict[str, Any] | None = None
-
-
-class SurveyEfficiencyForObservations(BaseModel):
-    """A survey efficiency analysis of executed observations for an event."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: int
-    created_at: str | None = None
-    modified: str | None = None
-    requester_id: int | None = None
-    gcnevent_id: int | None = None
-    localization_id: int | None = None
-    instrument_id: int | None = None
-    payload: dict[str, Any] = Field(default_factory=dict)
-    status: str | None = None
-    lightcurves: Any = None
-    number_of_transients: int | None = None
-    number_in_covered: int | None = None
-    number_detected: int | None = None
-    efficiency: float | None = None
-    requester: dict[str, Any] | None = None
-    gcnevent: dict[str, Any] | None = None
-    localization: dict[str, Any] | None = None
-    instrument: dict[str, Any] | None = None
-    groups: list[dict[str, Any]] | None = None
+    filter: Filter | None = None
+    localization: Localization | None = None
 
 
 class GcnCatalogQuery(BaseModel):
-    """A catalog query submitted for a GCN event."""
+    """A catalog query submitted for a GCN event (upstream ``CatalogQuery``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     requester_id: int | None = None
     allocation_id: int | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
     status: str | None = None
-    requester: dict[str, Any] | None = None
-    allocation: dict[str, Any] | None = None
-    target_groups: list[dict[str, Any]] | None = None
+    requester: User | None = None
+    allocation: Allocation | None = None
+    target_groups: list[Group] | None = None
 
 
 class GcnEvent(BaseModel):
-    """A GCN event, keyed by its UTC observation time (``dateobs``)."""
+    """A GCN event, keyed by its UTC observation time (upstream ``GcnEvent``).
+
+    ``tags`` (the distinct texts of the event's ``GcnTag`` rows) and
+    ``lightcurve`` (a URL parsed out of the first notice) are properties the
+    handlers inject rather than columns; the underlying ``_tags`` relationship
+    is never serialized. ``circulars``, ``gracedb_log`` and ``gracedb_labels``
+    are deferred, so they only appear when a handler undefers them.
+    ``event_users_ids`` is a column property aggregating ``gcnevent_users``,
+    and ``event_users`` is the same join rows with the user's name copied in.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     sent_by_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime | None = None
     trigger_id: str | None = None
     aliases: list[str] | None = None
     tach_id: str | None = None
-    circulars: dict[str, Any] | None = None
-    gracedb_log: Any = None
-    gracedb_labels: Any = None
+    circulars: dict[str, str] | None = None
+    gracedb_log: dict[str, Any] | None = None
+    gracedb_labels: dict[str, Any] | None = None
     lightcurve: str | None = None
     event_users_ids: list[int] | None = None
     tags: list[str] | None = None
@@ -231,15 +264,15 @@ class GcnEvent(BaseModel):
     properties: list[GcnProperty] | None = None
     summaries: list[GcnSummary] | None = None
     reports: list[GcnReport] | None = None
-    comments: list[dict[str, Any]] | None = None
-    reminders: list[dict[str, Any]] | None = None
+    comments: list[Comment] | None = None
+    reminders: list[Reminder] | None = None
     detectors: list[MMADetector] | None = None
     gcn_triggers: list[GcnTrigger] | None = None
     event_users: list[GcnEventUser] | None = None
     gcnevent_users: list[GcnEventUser] | None = None
-    users: list[dict[str, Any]] | None = None
-    groups: list[dict[str, Any]] | None = None
-    sent_by: dict[str, Any] | None = None
+    users: list[User] | None = None
+    groups: list[Group] | None = None
+    sent_by: User | None = None
     observationplan_requests: list[ObservationPlanRequest] | None = None
     survey_efficiency_analyses: list[SurveyEfficiencyForObservations] | None = None
     crossmatch_states: list[GcnEventCrossmatchState] | None = None
@@ -297,13 +330,16 @@ class GcnEventTagPostResponse(BaseModel):
 
 
 class GcnEventTachInfo(BaseModel):
-    """The TACH identifiers, aliases and circulars of a GCN event."""
+    """The TACH identifiers, aliases and circulars of a GCN event.
+
+    ``circulars`` maps GCN circular ID to that circular's subject line.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     tach_id: str | None = None
     aliases: list[str] | None = None
-    circulars: dict[str, Any] | None = None
+    circulars: dict[str, str] | None = None
 
 
 class GcnEventCrossmatchRequeue(BaseModel):
@@ -376,17 +412,21 @@ class GcnReportPost(BaseModel):
 
 
 class DefaultGcnTag(BaseModel):
-    """A rule that automatically tags matching GCN events."""
+    """A rule that automatically tags matching GCN events.
+
+    Upstream ``DefaultGcnTag``. ``filters`` is free-form JSON; the ingester
+    reads the keys ``gcn_tags``, ``notice_types`` and ``localization_tags``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     requester_id: int | None = None
     default_tag_name: str | None = None
     filters: dict[str, Any] | None = None
-    requester: dict[str, Any] | None = None
+    requester: User | None = None
 
 
 class DefaultGcnTagPost(BaseModel):
@@ -399,21 +439,21 @@ class DefaultGcnTagPost(BaseModel):
 
 
 class GcnEventObj(BaseModel):
-    """An object's standing against a GCN event."""
+    """An object's standing against a GCN event (upstream ``GcnEventObj``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     obj_id: str | None = None
-    dateobs: str | None = None
-    status: str | None = None
+    dateobs: datetime | None = None
+    status: Literal["pending", "confirmed", "ambiguous", "rejected"] | None = None
     confirmer_id: int | None = None
     explanation: str | None = None
     notes: str | None = None
-    obj: dict[str, Any] | None = None
-    confirmer: dict[str, Any] | None = None
+    obj: Source | None = None
+    confirmer: User | None = None
     gcnevent: dict[str, Any] | None = None
 
 
@@ -423,7 +463,7 @@ class GcnEventObjPost(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_id: str
-    status: str
+    status: Literal["pending", "confirmed", "ambiguous", "rejected"]
     localization_name: str
     localization_cumprob: float
     start_date: str

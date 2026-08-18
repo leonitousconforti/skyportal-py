@@ -18,6 +18,7 @@ from skyportal_py.followup_requests import (
 from skyportal_py.groups import Group
 from skyportal_py.instruments import Instrument, InstrumentField
 from skyportal_py.localizations import Localization
+from skyportal_py.survey_efficiency import SurveyEfficiencyForObservationPlan
 from skyportal_py.users import User
 
 
@@ -206,33 +207,6 @@ class ObservationPlanSimSurveyResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: int
-
-
-class SurveyEfficiencyForObservationPlan(BaseModel):
-    """An efficiency analysis (upstream ``SurveyEfficiencyForObservationPlan``).
-
-    ``number_of_transients``, ``number_in_covered``, ``number_detected``
-    and ``efficiency`` are properties derived from ``lightcurves`` that
-    the handler adds to the serialized row.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: int
-    created_at: datetime.datetime | None = None
-    modified: datetime.datetime | None = None
-    observation_plan_id: int | None = None
-    requester_id: int | None = None
-    payload: dict[str, Any] = Field(default_factory=dict)
-    status: str | None = None
-    lightcurves: Any = None
-    number_of_transients: int | None = None
-    number_in_covered: int | None = None
-    number_detected: int | None = None
-    efficiency: float | None = None
-    requester: User | None = None
-    observation_plan: EventObservationPlan | None = None
-    groups: list[Group] = Field(default_factory=list)
 
 
 class DefaultObservationPlanPost(BaseModel):

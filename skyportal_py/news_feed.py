@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Literal
+
 import httpx
 from pydantic import BaseModel, ConfigDict
 
@@ -9,7 +12,11 @@ from skyportal_py._http import unwrap
 
 
 class NewsFeedAuthorInfo(BaseModel):
-    """Display information about the user behind a news feed item."""
+    """Display information about the user behind a news feed item.
+
+    Exactly the fields upstream's ``basic_user_display_info`` (and
+    ``Comment.construct_author_info_dict``) copies off the ``User``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -21,12 +28,22 @@ class NewsFeedAuthorInfo(BaseModel):
 
 
 class NewsFeedItem(BaseModel):
-    """One entry in the news feed."""
+    """One entry in the news feed (no upstream model; built by the handler).
+
+    ``author`` is only set on comment items; ``author_info`` is absent on
+    source items.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    type: str
-    time: str | None = None
+    type: Literal[
+        "source",
+        "comment",
+        "classification",
+        "spectrum",
+        "photometry",
+    ]
+    time: datetime | None = None
     message: str | None = None
     source_id: str | None = None
     classification: str | None = None

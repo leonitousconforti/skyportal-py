@@ -26,7 +26,18 @@ class SummaryQueryPost(BaseModel):
 
 
 class SummaryQueryMatch(BaseModel):
-    """A source matching a summary query, with its similarity score."""
+    """One vector-store hit for a summary query (not a SkyPortal model).
+
+    The shape is defined by the Pinecone client, not by SkyPortal: when
+    ``q`` is used the handler rebuilds each hit as exactly ``id``,
+    ``score`` and ``metadata``, but when ``obj_id`` is used it passes the
+    raw ``matches`` of the Pinecone query response straight through, so
+    the remaining fields are Pinecone's ``ScoredVector`` attributes
+    (``values``, ``sparse_values``, serialized as ``sparseValues``) and
+    may change with the Pinecone SDK version rather than with SkyPortal.
+    ``metadata`` holds whatever SkyPortal indexed alongside the summary
+    (``redshift``, ``class``, ...), so it stays free-form.
+    """
 
     model_config = ConfigDict(extra="forbid", validate_by_name=True)
 

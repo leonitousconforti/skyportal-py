@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
 
 
 class PublicSourcePageOptions(BaseModel):
@@ -15,14 +17,20 @@ class PublicSourcePageOptions(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    photometry: str | None = None
-    classifications: str | None = None
-    spectroscopy: str | None = None
-    summary: str | None = None
+    photometry: Literal["public", "private", "no data"] | None = None
+    classifications: Literal["public", "private", "no data"] | None = None
+    spectroscopy: Literal["public", "private", "no data"] | None = None
+    summary: Literal["public", "private", "no data"] | None = None
 
 
 class PublicSourcePage(BaseModel):
-    """A published snapshot of a source at a given date."""
+    """A published snapshot of a source (upstream ``PublicSourcePage``).
+
+    Upstream overrides ``to_dict`` to return exactly these keys, so the
+    ``data``, ``is_auto_published`` and ``release_id`` columns and the
+    ``release`` relationship never reach the client; ``release_link_name``
+    is derived from the release instead.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -30,7 +38,7 @@ class PublicSourcePage(BaseModel):
     source_id: str | None = None
     release_link_name: str | None = None
     is_visible: bool | None = None
-    created_at: str | None = None
+    created_at: datetime | None = None
     hash: str | None = None
     options: PublicSourcePageOptions | None = None
 
@@ -44,13 +52,18 @@ class PublicSourcePagePostResponse(BaseModel):
 
 
 class PublicRelease(BaseModel):
-    """A public release grouping published source pages."""
+    """A public release of source pages (upstream ``PublicRelease``).
+
+    ``group_ids`` is injected by the handler and lists only the owning
+    groups the calling user can access; ``groups`` and ``source_pages`` are
+    relationships that only appear when a handler eager-loads them.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     name: str | None = None
     link_name: str | None = None
     description: str | None = None
@@ -58,6 +71,8 @@ class PublicRelease(BaseModel):
     auto_publish_enabled: bool | None = None
     options: dict[str, Any] | None = None
     group_ids: list[int] = Field(default_factory=list)
+    groups: list[Group] | None = None
+    source_pages: list[PublicSourcePage] | None = None
 
 
 class PublicReleasePost(BaseModel):

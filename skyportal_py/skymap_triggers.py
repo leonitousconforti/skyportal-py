@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,11 +9,15 @@ from skyportal_py._http import unwrap
 
 
 class SkymapTriggerQueue(BaseModel):
-    """The skymap-based triggers currently queued on a remote facility."""
+    """The skymap-based triggers currently queued on a remote facility.
+
+    There is no upstream SQLAlchemy model: the names come straight back
+    from the instrument's remote observation plan API.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    trigger_names: list[Any] = Field(default_factory=list)
+    trigger_names: list[str] = Field(default_factory=list)
 
 
 def fetch_skymap_triggers(

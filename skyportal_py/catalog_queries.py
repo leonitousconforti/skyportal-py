@@ -11,7 +11,11 @@ from skyportal_py._http import unwrap
 
 
 class CatalogQueryPost(BaseModel):
-    """Payload for submitting a catalog query."""
+    """Payload for submitting a catalog query (upstream ``CatalogQueryPost``)."""
+
+    # ``requester_id`` is filled in server-side from the token's user. The
+    # created ``CatalogQuery`` is not returned here; it is read back through
+    # ``gcn_events.fetch_gcn_event_catalog_queries``.
 
     model_config = ConfigDict(extra="forbid")
 

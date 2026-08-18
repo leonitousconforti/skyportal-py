@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,12 +29,17 @@ class MovingObjectFollowupPost(BaseModel):
 
 
 class MovingObjectObservation(BaseModel):
-    """A single scheduled exposure of a moving object."""
+    """A scheduled exposure from ``find_observable_sequence``.
+
+    This is not a database model: the handler returns the plain dicts
+    built by ``skyportal.utils.moving_objects.find_observable_sequence``,
+    nothing is persisted, and the keys below are the complete set.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    start_time: str | None = None
-    end_time: str | None = None
+    start_time: datetime.datetime | None = None
+    end_time: datetime.datetime | None = None
     band: str | None = None
     field_id: int | None = None
     airmass: float | None = None

@@ -2,31 +2,38 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
+from skyportal_py.users import User
 
 
 class RecurringAPI(BaseModel):
-    """A recurring API call scheduled by a user."""
+    """A recurring API call scheduled by a user (upstream ``RecurringAPI``).
+
+    ``owner`` is always loaded (``lazy="selectin"`` upstream). ``payload``
+    is free-form JSON, and the single-object endpoint returns it exactly as
+    stored, which may still be a JSON string.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     endpoint: str | None = None
     method: str | None = None
-    payload: Any = None
-    next_call: str | None = None
+    payload: dict[str, Any] | str | None = None
+    next_call: datetime | None = None
     call_delay: float | None = None
     number_of_retries: int | None = None
     active: bool | None = None
     owner_id: int | None = None
-    owner: dict[str, Any] | None = None
-    created_at: str | None = None
-    modified: str | None = None
+    owner: User | None = None
 
 
 class RecurringAPIPost(BaseModel):
