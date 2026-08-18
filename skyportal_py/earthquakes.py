@@ -1,0 +1,366 @@
+"""Typed endpoint functions for ``/api/earthquake``."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import httpx
+from pydantic import BaseModel, ConfigDict, Field
+
+from skyportal_py._http import unwrap
+
+
+class EarthquakeNotice(BaseModel):
+    """A single notice (e.g. one QuakeML message) about an earthquake."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: str | None = None
+    modified: str | None = None
+    sent_by_id: int | None = None
+    content: Any = None
+    event_id: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    depth: float | None = None
+    magnitude: float | None = None
+    date: str | None = None
+    country: str | None = None
+
+
+class EarthquakePrediction(BaseModel):
+    """A predicted seismic arrival for one detector and earthquake."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: str | None = None
+    modified: str | None = None
+    event_id: int | None = None
+    detector_id: int | None = None
+    d: float | None = None
+    p: str | None = None
+    s: str | None = None
+    r2p0: str | None = None
+    r3p5: str | None = None
+    r5p0: str | None = None
+    rfamp: float | None = None
+    lockloss: float | None = None
+
+
+class EarthquakeMeasurement(BaseModel):
+    """A measured ground velocity for one detector and earthquake."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: str | None = None
+    modified: str | None = None
+    event_id: int | None = None
+    detector_id: int | None = None
+    rfamp: float | None = None
+    lockloss: int | None = None
+
+
+class Earthquake(BaseModel):
+    """An earthquake event."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: str | None = None
+    modified: str | None = None
+    sent_by_id: int | None = None
+    event_id: str | None = None
+    event_uri: str | None = None
+    status: str | None = None
+    notices: list[EarthquakeNotice] = Field(default_factory=list)
+    predictions: list[EarthquakePrediction] = Field(default_factory=list)
+    measurements: list[EarthquakeMeasurement] = Field(default_factory=list)
+    comments: list[dict[str, Any]] = Field(default_factory=list)
+    reminders: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class EarthquakesPage(BaseModel):
+    """One page of results from an earthquake events query."""
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
+
+    events: list[Earthquake] = Field(default_factory=list)
+    total_matches: int = Field(alias="totalMatches", default=0)
+
+
+class EarthquakePost(BaseModel):
+    """Payload for ingesting an earthquake event."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    xml: str | None = None
+    event_id: str | None = None
+    date: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    depth: float | None = None
+    magnitude: float | None = None
+
+
+class EarthquakePostResponse(BaseModel):
+    """Result of ingesting an earthquake event."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | int | None = None
+
+
+def fetch_earthquake(client: httpx.Client, event_id: str) -> Earthquake:
+    """Retrieve a single earthquake event by its event ID.
+
+    The response includes the event's notices (with raw QuakeML content),
+    predictions and comments, each sorted newest first.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID, e.g. ``"us7000abcd"``.
+    """
+    response = client.get(f"/api/earthquake/{event_id}")
+    return Earthquake.model_validate(unwrap(response))
+
+
+def fetch_earthquakes(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
+    client: httpx.Client,
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    status_keep: str | None = None,
+    status_remove: str | None = None,
+    page_number: int = 1,
+    num_per_page: int = 100,
+) -> EarthquakesPage:
+    """Query earthquake events, one page at a time.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    start_date, end_date : str, optional
+        Arrow-parseable date strings (e.g. ``"2020-01-01"``) filtering on the
+        date of the event's notices.
+    status_keep : str, optional
+        Keep only events whose status contains this string.
+    status_remove : str, optional
+        Drop events whose status contains this string.
+    page_number, num_per_page : int, optional
+        Pagination controls; the server defaults to page 1 and 100 per page.
+    """
+    params: dict[str, str | int] = {
+        "pageNumber": page_number,
+        "numPerPage": num_per_page,
+    }
+    if start_date is not None:
+        params["startDate"] = start_date
+    if end_date is not None:
+        params["endDate"] = end_date
+    if status_keep is not None:
+        params["statusKeep"] = status_keep
+    if status_remove is not None:
+        params["statusRemove"] = status_remove
+    response = client.get("/api/earthquake", params=params)
+    return EarthquakesPage.model_validate(unwrap(response))
+
+
+def fetch_earthquake_statuses(client: httpx.Client) -> list[str]:
+    """Retrieve the distinct status tags used by earthquake events.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    """
+    response = client.get("/api/earthquake/status")
+    return list(unwrap(response))
+
+
+def post_earthquake(
+    client: httpx.Client,
+    payload: EarthquakePost,
+) -> EarthquakePostResponse:
+    """Ingest an earthquake event.
+
+    Provide either ``xml`` (raw QuakeML) or all of ``date``, ``event_id``,
+    ``latitude``, ``longitude``, ``depth`` and ``magnitude``. Posting again
+    for a known event adds another notice; only the original poster may
+    update an existing event.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    payload : EarthquakePost
+        The earthquake to ingest.
+    """
+    response = client.post(
+        "/api/earthquake",
+        json=payload.model_dump(exclude_none=True),
+    )
+    return EarthquakePostResponse.model_validate(unwrap(response))
+
+
+def delete_earthquake(client: httpx.Client, event_id: str) -> None:
+    """Delete an earthquake event.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID to delete.
+    """
+    unwrap(client.delete(f"/api/earthquake/{event_id}"))
+
+
+def post_earthquake_prediction(
+    client: httpx.Client,
+    event_id: str,
+    mmadetector_id: int,
+) -> None:
+    """Run and store a seismic arrival prediction for one detector.
+
+    The prediction uses the event's most recent notice, so the event must
+    already have one, and the detector must be at a fixed location.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID.
+    mmadetector_id : int
+        ID of the MMA detector to predict arrivals for.
+    """
+    unwrap(
+        client.post(
+            f"/api/earthquake/{event_id}/mmadetector/{mmadetector_id}/predictions"
+        )
+    )
+
+
+def fetch_earthquake_measurement(
+    client: httpx.Client,
+    event_id: str,
+    mmadetector_id: int,
+) -> EarthquakeMeasurement:
+    """Retrieve the ground velocity measurement for one detector.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID.
+    mmadetector_id : int
+        ID of the MMA detector the measurement belongs to.
+    """
+    response = client.get(
+        f"/api/earthquake/{event_id}/mmadetector/{mmadetector_id}/measurements"
+    )
+    return EarthquakeMeasurement.model_validate(unwrap(response))
+
+
+def post_earthquake_measurement(
+    client: httpx.Client,
+    event_id: str,
+    mmadetector_id: int,
+    *,
+    rfamp: float | None = None,
+    lockloss: int | None = None,
+) -> None:
+    """Post a ground velocity measurement for one detector.
+
+    At least one of ``rfamp`` or ``lockloss`` is required. Only one
+    measurement may exist per earthquake and detector; use
+    :func:`update_earthquake_measurement` to change an existing one.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID.
+    mmadetector_id : int
+        ID of the MMA detector the measurement belongs to.
+    rfamp : float, optional
+        Measured earthquake amplitude, in m/s.
+    lockloss : int, optional
+        Measured lockloss: 0 (no lockloss) or 1 (lockloss).
+    """
+    fields = {"rfamp": rfamp, "lockloss": lockloss}
+    payload = {name: value for name, value in fields.items() if value is not None}
+    unwrap(
+        client.post(
+            f"/api/earthquake/{event_id}/mmadetector/{mmadetector_id}/measurements",
+            json=payload,
+        )
+    )
+
+
+def update_earthquake_measurement(
+    client: httpx.Client,
+    event_id: str,
+    mmadetector_id: int,
+    *,
+    rfamp: float | None = None,
+    lockloss: int | None = None,
+) -> None:
+    """Update the ground velocity measurement for one detector.
+
+    At least one of ``rfamp`` or ``lockloss`` is required; omitted fields are
+    left unchanged.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID.
+    mmadetector_id : int
+        ID of the MMA detector the measurement belongs to.
+    rfamp : float, optional
+        New measured earthquake amplitude, in m/s.
+    lockloss : int, optional
+        New measured lockloss: 0 (no lockloss) or 1 (lockloss).
+    """
+    fields = {"rfamp": rfamp, "lockloss": lockloss}
+    payload = {name: value for name, value in fields.items() if value is not None}
+    unwrap(
+        client.patch(
+            f"/api/earthquake/{event_id}/mmadetector/{mmadetector_id}/measurements",
+            json=payload,
+        )
+    )
+
+
+def delete_earthquake_measurement(
+    client: httpx.Client,
+    event_id: str,
+    mmadetector_id: int,
+) -> None:
+    """Delete the ground velocity measurement for one detector.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    event_id : str
+        Earthquake event ID.
+    mmadetector_id : int
+        ID of the MMA detector the measurement belongs to.
+    """
+    unwrap(
+        client.delete(
+            f"/api/earthquake/{event_id}/mmadetector/{mmadetector_id}/measurements"
+        )
+    )

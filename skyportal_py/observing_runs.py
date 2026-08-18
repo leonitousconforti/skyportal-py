@@ -100,3 +100,73 @@ def delete_observing_run(client: httpx.Client, run_id: int) -> None:
         ID of the observing run to delete.
     """
     unwrap(client.delete(f"/api/observing_run/{run_id}"))
+
+
+class ObservingRunUpdate(BaseModel):
+    """Payload for updating an observing run; every field is optional."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    instrument_id: int | None = None
+    calendar_date: str | None = None
+    pi: str | None = None
+    observers: str | None = None
+    duration: int | None = None
+    group_id: int | None = None
+
+
+def update_observing_run(
+    client: httpx.Client,
+    run_id: int,
+    payload: ObservingRunUpdate,
+) -> None:
+    """Update an observing run.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    run_id : int
+        ID of the observing run to update. Only the owner of a run may
+        modify it.
+    payload : ObservingRunUpdate
+        Fields to change. The run's end time is recomputed server-side
+        afterwards.
+    """
+    unwrap(
+        client.put(
+            f"/api/observing_run/{run_id}",
+            json=payload.model_dump(exclude_none=True),
+        )
+    )
+
+
+def update_observing_run_not_observed(
+    client: httpx.Client,
+    run_id: int,
+    current_status: str,
+    new_status: str,
+) -> None:
+    """Bulk-restatus the assignments of an observing run.
+
+    Every assignment on the run whose status equals ``current_status`` is
+    moved to ``new_status``; the others are left alone.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    run_id : int
+        ID of the observing run.
+    current_status : str
+        Status an assignment must currently have to be updated, e.g.
+        ``"pending"``.
+    new_status : str
+        Status to apply, e.g. ``"not observed"``.
+    """
+    unwrap(
+        client.put(
+            f"/api/observing_run/{run_id}/not_observed",
+            json={"current_status": current_status, "new_status": new_status},
+        )
+    )

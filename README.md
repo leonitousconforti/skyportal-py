@@ -64,9 +64,32 @@ client.delete_classification(7)
 client.delete_photometry(1234)
 client.delete_spectrum(56)
 
+# multimessenger follow-up
+events = client.fetch_gcn_events()  # -> GcnEventsPage
+skymap = client.fetch_localization_skymap("2023-01-01T00:00:00", "bayestar.fits.gz")
+plans = client.fetch_observation_plans()  # -> ObservationPlansPage
+done = client.fetch_observations(  # -> ObservationsPage
+    start_date="2026-01-01", end_date="2026-02-01", telescope_name="ZTF"
+)
+
+# collaboration
+from skyportal_py import reminders
+
+my_shifts = client.fetch_shifts()  # -> list[Shift]
+client.post_reminder(
+    "ZTF20abcdef",
+    reminders.ReminderPost(text="check the spectrum", next_reminder="2026-09-01"),
+)
+favourites = client.fetch_listings()  # -> list[Listing]
+
 # equivalently, call the functions directly with any httpx.Client:
 source = sources.fetch_source(client, "ZTF20abcdef")
 ```
+
+The full endpoint surface is broad: every module in `skyportal_py` maps to one
+SkyPortal API resource, and every function on it maps to one HTTP verb on one
+route. Import the module to see what is available (`from skyportal_py import
+gcn_events`), or call the bound method on the client.
 
 All models are strict (`extra="forbid"`): a field the model does not declare
 fails validation. Error responses raise `SkyPortalError`
