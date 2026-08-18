@@ -28,7 +28,15 @@ candidates_page = client.fetch_candidates(group_ids=[1])  # -> CandidatesPage
 lightcurve = client.fetch_photometry("ZTF20abcdef")  # -> list[PhotometryPoint]
 notes = client.fetch_comments("ZTF20abcdef")  # -> list[Comment]
 labels = client.fetch_classifications("ZTF20abcdef")  # -> list[Classification]
+spectra_list = client.fetch_spectra("ZTF20abcdef")  # -> list[Spectrum]
+notes_auto = client.fetch_annotations("ZTF20abcdef")  # -> list[Annotation]
 client.post_comment("ZTF20abcdef", "spectrum looks like a SN Ia")
+
+scopes = client.fetch_telescopes()  # -> list[Telescope]
+cameras = client.fetch_instruments()  # -> list[Instrument]
+schemes = client.fetch_taxonomies()  # -> list[Taxonomy]
+alert_filters = client.fetch_filters()  # -> list[Filter]
+people = client.fetch_users()  # -> UsersPage
 
 # equivalently, call the functions directly with any httpx.Client:
 source = sources.fetch_source(client, "ZTF20abcdef")
@@ -42,7 +50,7 @@ function yet, use the httpx client directly and `unwrap` the envelope:
 ```python
 from skyportal_py import unwrap
 
-unwrap(client.get("/api/taxonomy"))
+unwrap(client.get("/api/streams"))
 ```
 
 ## Development

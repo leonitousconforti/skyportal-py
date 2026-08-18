@@ -5,13 +5,20 @@ from __future__ import annotations
 import httpx
 
 from skyportal_py import (
+    annotations,
     candidates,
     classifications,
     comments,
+    filters,
     groups,
+    instruments,
     photometry,
     profile,
     sources,
+    spectra,
+    taxonomies,
+    telescopes,
+    users,
 )
 
 
@@ -39,6 +46,21 @@ class SkyPortal(httpx.Client):
     post_comment = comments.post_comment
     fetch_classifications = classifications.fetch_classifications
     post_classification = classifications.post_classification
+    fetch_spectrum = spectra.fetch_spectrum
+    fetch_spectra = spectra.fetch_spectra
+    post_spectrum = spectra.post_spectrum
+    fetch_instrument = instruments.fetch_instrument
+    fetch_instruments = instruments.fetch_instruments
+    fetch_telescope = telescopes.fetch_telescope
+    fetch_telescopes = telescopes.fetch_telescopes
+    fetch_taxonomy = taxonomies.fetch_taxonomy
+    fetch_taxonomies = taxonomies.fetch_taxonomies
+    fetch_filter = filters.fetch_filter
+    fetch_filters = filters.fetch_filters
+    fetch_annotations = annotations.fetch_annotations
+    post_annotation = annotations.post_annotation
+    fetch_user = users.fetch_user
+    fetch_users = users.fetch_users
 
 
 def create_client(
