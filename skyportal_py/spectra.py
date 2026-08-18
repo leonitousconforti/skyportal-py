@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,6 +49,8 @@ class SpectrumPostResponse(BaseModel):
 
 
 class _SourceSpectra(BaseModel):
+    """Envelope of a source's spectra response."""
+
     model_config = ConfigDict(extra="allow")
 
     spectra: list[Spectrum] = Field(default_factory=list)
@@ -81,10 +81,7 @@ def fetch_spectra(client: httpx.Client, obj_id: str) -> list[Spectrum]:
         Object ID of the source, e.g. ``"ZTF20abcdef"``.
     """
     response = client.get(f"/api/sources/{obj_id}/spectra")
-    data: Any = unwrap(response)
-    if isinstance(data, list):  # older servers return a bare list
-        return [Spectrum.model_validate(item) for item in data]
-    return _SourceSpectra.model_validate(data).spectra
+    return _SourceSpectra.model_validate(unwrap(response)).spectra
 
 
 def post_spectrum(client: httpx.Client, payload: SpectrumPost) -> SpectrumPostResponse:

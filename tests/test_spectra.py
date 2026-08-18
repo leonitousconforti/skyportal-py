@@ -66,29 +66,6 @@ def test_fetch_spectra(client: httpx.Client) -> None:
 
 
 @respx.mock
-def test_fetch_spectra_bare_list(client: httpx.Client) -> None:
-    """Older servers return the spectra as a bare list."""
-    respx.get(f"{BASE_URL}/api/sources/ZTF20abcdef/spectra").mock(
-        return_value=httpx.Response(
-            200,
-            json={
-                "status": "success",
-                "data": [
-                    {
-                        "id": 12,
-                        "obj_id": "ZTF20abcdef",
-                        "instrument_id": 3,
-                    }
-                ],
-            },
-        )
-    )
-    result = spectra.fetch_spectra(client, "ZTF20abcdef")
-    assert len(result) == 1
-    assert result[0].id == 12
-
-
-@respx.mock
 def test_post_spectrum(client: httpx.Client) -> None:
     """The payload is serialized without unset optional fields."""
     route = respx.post(f"{BASE_URL}/api/spectrum").mock(
