@@ -2,26 +2,30 @@
 
 from __future__ import annotations
 
-from typing import Any
+import datetime
+from typing import Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
+from skyportal_py.users import User
 
 
 class GroupAdmissionRequest(BaseModel):
-    """A user's request to join a group."""
+    """A request to join a group (upstream ``GroupAdmissionRequest``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     user_id: int | None = None
     group_id: int | None = None
-    status: str | None = None
-    user: dict[str, Any] | None = None
+    status: Literal["pending", "accepted", "declined"] | None = None
+    user: User | None = None
+    group: Group | None = None
 
 
 class GroupAdmissionRequestPostResponse(BaseModel):

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,7 +11,7 @@ from skyportal_py._http import unwrap
 
 
 class TeamGroup(BaseModel):
-    """A group belonging to a team."""
+    """A group belonging to a team, as assembled by the team handler."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -30,13 +32,16 @@ class TeamMember(BaseModel):
 
 
 class Team(BaseModel):
-    """A collaboration-level grouping of one or more groups."""
+    """A collaboration-level grouping of groups (upstream ``Team``)."""
+
+    # ``groups``, ``num_members`` and ``users`` are hand-built by the handler's
+    # ``team_to_dict``; ``users`` is omitted from the list endpoint.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     name: str | None = None
     nickname: str | None = None
     description: str | None = None

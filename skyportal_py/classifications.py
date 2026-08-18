@@ -2,47 +2,58 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Any
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
 from skyportal_py.taxonomies import Taxonomy
 
 
 class ClassificationVote(BaseModel):
-    """A user's up- or down-vote on a classification."""
+    """A vote on a classification (upstream ``ClassificationVote``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     classification_id: int | None = None
     voter_id: int | None = None
     vote: int | None = None
-    created_at: str | None = None
-    modified: str | None = None
 
 
 class ClassificationEdit(BaseModel):
-    """A record of an edit to a classification's probability."""
+    """An edit of a classification's probability (upstream ``ClassificationEdit``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     classification_id: int | None = None
     editor_id: int | None = None
     editor_name: str | None = None
     old_probability: float | None = None
     new_probability: float | None = None
-    created_at: str | None = None
-    modified: str | None = None
 
 
 class Classification(BaseModel):
-    """A classification of a source."""
+    """A classification of a source (upstream ``Classification``).
+
+    ``obj`` stays a ``dict`` because typing it as
+    :class:`skyportal_py.sources.Source` would import in a circle:
+    ``sources`` already imports this module.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     obj_id: str
     classification: str
     taxonomy_id: int
@@ -51,11 +62,12 @@ class Classification(BaseModel):
     author_id: int | None = None
     origin: str | None = None
     ml: bool | None = None
-    created_at: str | None = None
-    modified: str | None = None
     taxonomy: Taxonomy | None = None
     votes: list[ClassificationVote] | None = None
     edits: list[ClassificationEdit] | None = None
+    groups: list[Group] | None = None
+    author: dict[str, Any] | None = None
+    obj: dict[str, Any] | None = None
 
 
 class ClassificationPost(BaseModel):
@@ -66,8 +78,12 @@ class ClassificationPost(BaseModel):
     obj_id: str
     classification: str
     taxonomy_id: int
+    origin: str | None = None
     probability: float | None = None
+    ml: bool | None = None
     group_ids: list[int] | None = None
+    vote: bool | None = None
+    label: bool | None = None
 
 
 class ClassificationPostResponse(BaseModel):

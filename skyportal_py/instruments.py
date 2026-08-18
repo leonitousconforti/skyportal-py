@@ -2,25 +2,79 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.telescopes import Telescope
 
 
-class Instrument(BaseModel):
-    """A SkyPortal instrument."""
+class InstrumentField(BaseModel):
+    """One field (pointing) of an instrument (upstream ``InstrumentField``).
+
+    ``contour`` and ``contour_summary`` are deferred server-side and only
+    present when the request asked for GeoJSON. ``airmass`` is injected by the
+    instrument endpoint when the fields are sliced by a localization.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    name: str
-    type: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    instrument_id: int | None = None
+    field_id: int | None = None
+    ra: float | None = None
+    dec: float | None = None
+    contour: dict[str, Any] | None = None
+    contour_summary: dict[str, Any] | None = None
+    reference_filters: list[str] | None = None
+    reference_filter_mags: list[float] | None = None
+    tiles: list[dict[str, Any]] | None = None
+    airmass: float | None = None
+
+
+class Instrument(BaseModel):
+    """A SkyPortal instrument (upstream ``Instrument``).
+
+    ``allocations`` stays untyped: ``allocations.Allocation`` points back at
+    ``Instrument``, so typing it here would create an import cycle.
+    ``log_exists``, ``number_of_fields`` and ``region_summary`` are injected by
+    the instrument endpoints rather than being columns.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    name: str | None = None
+    type: Literal["imager", "spectrograph", "imaging spectrograph"] | None = None
     band: str | None = None
     telescope_id: int | None = None
+    telescope: Telescope | None = None
     filters: list[str] = Field(default_factory=list)
+    sensitivity_data: dict[str, Any] | None = None
+    configuration_data: dict[str, Any] | None = None
+    status: dict[str, Any] | None = None
+    last_status_update: datetime | None = None
+    api_classname: str | None = None
+    api_classname_obsplan: str | None = None
+    listener_classname: str | None = None
+    treasuremap_id: int | None = None
+    tns_id: int | None = None
+    across_id: str | None = None
+    region: str | None = None
+    has_fields: bool | None = None
+    has_region: bool | None = None
+    fields: list[InstrumentField] | None = None
+    allocations: list[dict[str, Any]] | None = None
+    log_exists: bool | None = None
+    number_of_fields: int | None = None
+    region_summary: str | None = None
 
 
 def fetch_instruments(client: httpx.Client) -> list[Instrument]:
@@ -50,17 +104,18 @@ def fetch_instrument(client: httpx.Client, instrument_id: int) -> Instrument:
 
 
 class InstrumentLog(BaseModel):
-    """A log uploaded for an instrument."""
+    """A log uploaded for an instrument (upstream ``InstrumentLog``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     instrument_id: int | None = None
-    start_date: str | None = None
-    end_date: str | None = None
+    instrument: Instrument | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
     log: dict[str, Any] | None = None
-    created_at: str | None = None
-    modified: str | None = None
 
 
 class InstrumentPost(BaseModel):

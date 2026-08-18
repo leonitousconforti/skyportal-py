@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,21 +12,27 @@ from skyportal_py._http import unwrap
 
 
 class MMADetector(BaseModel):
-    """A multimessenger astronomical detector (MMADetector)."""
+    """A multimessenger astronomical detector (upstream ``MMADetector``).
+
+    ``events`` stays untyped: ``gcn_events.GcnEvent`` already points at
+    ``MMADetector``, so typing it would create an import cycle.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     name: str | None = None
     nickname: str | None = None
-    type: str | None = None
+    type: Literal["gravitational-wave", "neutrino", "gamma-ray-burst"] | None = None
     lat: float | None = None
     lon: float | None = None
     elevation: float | None = None
     fixed_location: bool | None = None
     events: list[dict[str, Any]] | None = None
-    created_at: str | None = None
-    modified: str | None = None
+    spectra: list[MMADetectorSpectrum] | None = None
+    time_intervals: list[MMADetectorTimeInterval] | None = None
 
 
 class MMADetectorPost(BaseModel):
@@ -51,21 +58,29 @@ class MMADetectorPostResponse(BaseModel):
 
 
 class MMADetectorSpectrum(BaseModel):
-    """A frequency-dependent sensitivity spectrum of an MMA detector."""
+    """A sensitivity spectrum of a detector (upstream ``MMADetectorSpectrum``).
+
+    ``owner`` and ``groups`` stay untyped: the upstream ``User`` and ``Group``
+    both own an ``mmadetector_spectra`` relationship, so typing them here would
+    risk an import cycle.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime | None = None
+    modified: datetime | None = None
     detector_id: int | None = None
+    detector: MMADetector | None = None
     frequencies: list[float] = Field(default_factory=list)
     amplitudes: list[float] = Field(default_factory=list)
-    start_time: str | None = None
-    end_time: str | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
     owner_id: int | None = None
+    owner: dict[str, Any] | None = None
+    groups: list[dict[str, Any]] | None = None
     original_file_string: str | None = None
     original_file_filename: str | None = None
-    created_at: str | None = None
-    modified: str | None = None
 
 
 class MMADetectorSpectrumPost(BaseModel):
@@ -90,15 +105,25 @@ class MMADetectorSpectrumPostResponse(BaseModel):
 
 
 class MMADetectorTimeInterval(BaseModel):
-    """A data-taking time interval of an MMA detector."""
+    """A detector data-taking interval (upstream ``MMADetectorTimeInterval``).
+
+    The time-interval endpoints build this payload by hand, so it carries only
+    these five keys rather than the model's full column set. ``owner`` and
+    ``groups`` stay untyped: the upstream ``User`` and ``Group`` both own an
+    ``mmadetector_time_intervals`` relationship, so typing them here would risk
+    an import cycle.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    time_interval: list[str] = Field(default_factory=list)
+    time_interval: list[datetime] = Field(default_factory=list)
     owner: dict[str, Any] | None = None
     groups: list[dict[str, Any]] | None = None
     detector: MMADetector | None = None
+
+
+MMADetector.model_rebuild()
 
 
 class MMADetectorTimeIntervalsPostResponse(BaseModel):

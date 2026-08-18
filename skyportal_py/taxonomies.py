@@ -2,25 +2,35 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
 
 
 class Taxonomy(BaseModel):
-    """A classification taxonomy."""
+    """A classification taxonomy (upstream ``Taxonomy``).
+
+    ``classifications`` stays untyped: ``classifications.Classification``
+    already points at ``Taxonomy``, so typing it would create an import cycle.
+    """
 
     model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
     id: int
-    name: str
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    name: str | None = None
     version: str | None = None
     provenance: str | None = None
-    is_latest: bool = Field(alias="isLatest", default=True)
+    is_latest: bool | None = Field(alias="isLatest", default=None)
     hierarchy: dict[str, Any] | None = None
+    groups: list[Group] | None = None
+    classifications: list[dict[str, Any]] | None = None
 
 
 def fetch_taxonomies(client: httpx.Client) -> list[Taxonomy]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -11,14 +12,28 @@ from skyportal_py._http import unwrap
 
 
 class Filter(BaseModel):
-    """An alert-stream filter belonging to a group."""
+    """An alert-stream filter belonging to a group (upstream ``Filter``).
+
+    ``stream``, ``group``, ``broker`` and ``candidates`` stay untyped: each of
+    those upstream models owns a ``filters`` (or ``filter``) relationship, so
+    typing them here would risk an import cycle.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    name: str
-    group_id: int | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    name: str | None = None
     stream_id: int | None = None
+    group_id: int | None = None
+    broker_id: int | None = None
+    altdata: dict[str, Any] | None = None
+    autosave: bool | None = None
+    stream: dict[str, Any] | None = None
+    group: dict[str, Any] | None = None
+    broker: dict[str, Any] | None = None
+    candidates: list[dict[str, Any]] | None = None
 
 
 def fetch_filters(client: httpx.Client) -> list[Filter]:

@@ -2,26 +2,115 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap, unwrap_content
+from skyportal_py.allocations import Allocation
+from skyportal_py.groups import Group
+from skyportal_py.users import User
 
 
-class FollowupRequest(BaseModel):
-    """A follow-up observation request."""
+class FacilityTransaction(BaseModel):
+    """A serialized exchange with a facility (upstream ``FacilityTransaction``).
+
+    ``followup_request`` and ``observation_plan_request`` are the parent
+    rows; they stay ``dict`` to avoid a circular import back into this
+    module and into :mod:`skyportal_py.observation_plans`.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    obj_id: str
-    allocation_id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    request: dict[str, Any] | None = None
+    response: dict[str, Any] | None = None
+    followup_request_id: int | None = None
+    observation_plan_request_id: int | None = None
+    initiator_id: int | None = None
+    initiator: User | None = None
+    followup_request: dict[str, Any] | None = None
+    observation_plan_request: dict[str, Any] | None = None
+
+
+class FacilityTransactionRequest(BaseModel):
+    """A queued facility call (upstream ``FacilityTransactionRequest``).
+
+    ``followup_request`` and ``observation_plan_request`` are the parent
+    rows; they stay ``dict`` to avoid a circular import back into this
+    module and into :mod:`skyportal_py.observation_plans`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    last_query: datetime.datetime | None = None
+    method: str | None = None
+    endpoint: str | None = None
+    data: dict[str, Any] | None = None
+    params: dict[str, Any] | None = None
+    headers: dict[str, Any] | None = None
     status: str | None = None
-    payload: dict[str, Any] = Field(default_factory=dict)
+    followup_request_id: int | None = None
+    observation_plan_request_id: int | None = None
+    initiator_id: int | None = None
+    initiator: User | None = None
+    followup_request: dict[str, Any] | None = None
+    observation_plan_request: dict[str, Any] | None = None
+
+
+class FollowupRequestWatcher(BaseModel):
+    """A user watching a follow-up request (upstream ``FollowupRequestUser``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    followuprequest_id: int | None = None
+    user_id: int | None = None
+
+
+class FollowupRequest(BaseModel):
+    """A follow-up observation request (upstream ``FollowupRequest``).
+
+    ``obj`` stays ``dict`` because typing it as
+    :class:`skyportal_py.sources.Source` would create an import cycle;
+    the same applies to ``photometry``, ``photometric_series`` and
+    ``spectra``, which all point back at the requesting object.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    obj_id: str | None = None
+    allocation_id: int | None = None
     requester_id: int | None = None
-    created_at: str | None = None
+    last_modified_by_id: int | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    status: str | None = None
+    comment: str | None = None
+    obj: dict[str, Any] | None = None
+    allocation: Allocation | None = None
+    requester: User | None = None
+    last_modified_by: User | None = None
+    target_groups: list[Group] = Field(default_factory=list)
+    watchers: list[FollowupRequestWatcher] = Field(default_factory=list)
+    transactions: list[FacilityTransaction] = Field(default_factory=list)
+    transaction_requests: list[FacilityTransactionRequest] = Field(default_factory=list)
+    photometry: list[dict[str, Any]] = Field(default_factory=list)
+    photometric_series: list[dict[str, Any]] = Field(default_factory=list)
+    spectra: list[dict[str, Any]] = Field(default_factory=list)
+    rise_time_utc: str | list[str] | None = None
+    set_time_utc: str | list[str] | None = None
 
 
 class FollowupRequestsPage(BaseModel):
@@ -163,13 +252,13 @@ def delete_followup_request(
 
 
 class DefaultFollowupRequest(BaseModel):
-    """A default follow-up request auto-triggered on source save."""
+    """A default follow-up request (upstream ``DefaultFollowupRequest``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     requester_id: int | None = None
     allocation_id: int | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
@@ -180,7 +269,9 @@ class DefaultFollowupRequest(BaseModel):
     validity_days: int | None = None
     comment: str | None = None
     implements_update: bool | None = None
-    allocation: dict[str, Any] | None = None
+    allocation: Allocation | None = None
+    requester: User | None = None
+    target_groups: list[Group] = Field(default_factory=list)
 
 
 class DefaultFollowupRequestPost(BaseModel):

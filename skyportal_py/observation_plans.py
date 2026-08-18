@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 from typing import Any
 
@@ -9,16 +10,25 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap, unwrap_content
+from skyportal_py.allocations import Allocation
+from skyportal_py.followup_requests import (
+    FacilityTransaction,
+    FacilityTransactionRequest,
+)
+from skyportal_py.groups import Group
+from skyportal_py.instruments import Instrument, InstrumentField
+from skyportal_py.localizations import Localization
+from skyportal_py.users import User
 
 
 class EventObservationPlanStatistics(BaseModel):
-    """Statistics derived from an event observation plan."""
+    """Statistics for one plan (upstream ``EventObservationPlanStatistics``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     observation_plan_id: int | None = None
     localization_id: int | None = None
     statistics: dict[str, Any] = Field(default_factory=dict)
@@ -26,61 +36,74 @@ class EventObservationPlanStatistics(BaseModel):
 
 
 class PlannedObservation(BaseModel):
-    """A single planned exposure within an event observation plan."""
+    """A planned exposure (upstream ``PlannedObservation``).
+
+    The single-plan handler renames the ``field_id`` foreign key to
+    ``field_db_id`` and puts the instrument's own field number in
+    ``field_id``, then adds ``rise_time``/``set_time`` (empty strings when
+    the field never rises or sets that night).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     observation_plan_id: int | None = None
     instrument_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime.datetime | None = None
     field_id: int | None = None
     field_db_id: int | None = None
     exposure_time: int | None = None
     weight: float | None = None
     filt: str | None = None
-    obstime: str | None = None
+    obstime: datetime.datetime | None = None
     overhead_per_exposure: int | None = None
     planned_observation_id: int | None = None
     rise_time: str | None = None
     set_time: str | None = None
-    field: dict[str, Any] | None = None
-    instrument: dict[str, Any] | None = None
+    field: InstrumentField | None = None
+    instrument: Instrument | None = None
     observation_plan: dict[str, Any] | None = None
 
 
 class EventObservationPlan(BaseModel):
-    """A generated observation plan (tiling) for a GCN event."""
+    """A generated observation plan (upstream ``EventObservationPlan``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     observation_plan_request_id: int | None = None
     instrument_id: int | None = None
-    dateobs: str | None = None
+    dateobs: datetime.datetime | None = None
     plan_name: str | None = None
-    validity_window_start: str | None = None
-    validity_window_end: str | None = None
+    validity_window_start: datetime.datetime | None = None
+    validity_window_end: datetime.datetime | None = None
     status: str | None = None
-    statistics: list[EventObservationPlanStatistics] | None = None
-    planned_observations: list[PlannedObservation] | None = None
-    instrument: dict[str, Any] | None = None
+    statistics: list[EventObservationPlanStatistics] = Field(default_factory=list)
+    planned_observations: list[PlannedObservation] = Field(default_factory=list)
+    survey_efficiency_analyses: list[SurveyEfficiencyForObservationPlan] = Field(
+        default_factory=list
+    )
+    instrument: Instrument | None = None
     observation_plan_request: dict[str, Any] | None = None
-    survey_efficiency_analyses: list[dict[str, Any]] | None = None
 
 
 class ObservationPlanRequest(BaseModel):
-    """A request for an event observation plan."""
+    """A request for an observation plan (upstream ``ObservationPlanRequest``).
+
+    ``gcnevent`` stays ``dict`` because
+    :mod:`skyportal_py.gcn_events` already imports this module, so typing
+    it would create an import cycle.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     requester_id: int | None = None
     last_modified_by_id: int | None = None
     gcnevent_id: int | None = None
@@ -90,15 +113,15 @@ class ObservationPlanRequest(BaseModel):
     allocation_id: int | None = None
     combined_id: str | None = None
     default_plan: bool | None = None
-    observation_plans: list[EventObservationPlan] | None = None
-    allocation: dict[str, Any] | None = None
+    observation_plans: list[EventObservationPlan] = Field(default_factory=list)
+    allocation: Allocation | None = None
     gcnevent: dict[str, Any] | None = None
-    localization: dict[str, Any] | None = None
-    requester: dict[str, Any] | None = None
-    last_modified_by: dict[str, Any] | None = None
-    target_groups: list[dict[str, Any]] | None = None
-    transactions: list[dict[str, Any]] | None = None
-    transaction_requests: list[dict[str, Any]] | None = None
+    localization: Localization | None = None
+    requester: User | None = None
+    last_modified_by: User | None = None
+    target_groups: list[Group] = Field(default_factory=list)
+    transactions: list[FacilityTransaction] = Field(default_factory=list)
+    transaction_requests: list[FacilityTransactionRequest] = Field(default_factory=list)
 
 
 class ObservationPlanRequestsPage(BaseModel):
@@ -186,13 +209,18 @@ class ObservationPlanSimSurveyResponse(BaseModel):
 
 
 class SurveyEfficiencyForObservationPlan(BaseModel):
-    """A survey efficiency analysis of an observation plan."""
+    """An efficiency analysis (upstream ``SurveyEfficiencyForObservationPlan``).
+
+    ``number_of_transients``, ``number_in_covered``, ``number_detected``
+    and ``efficiency`` are properties derived from ``lightcurves`` that
+    the handler adds to the serialized row.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     observation_plan_id: int | None = None
     requester_id: int | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
@@ -202,9 +230,9 @@ class SurveyEfficiencyForObservationPlan(BaseModel):
     number_in_covered: int | None = None
     number_detected: int | None = None
     efficiency: float | None = None
-    requester: dict[str, Any] | None = None
-    observation_plan: dict[str, Any] | None = None
-    groups: list[dict[str, Any]] | None = None
+    requester: User | None = None
+    observation_plan: EventObservationPlan | None = None
+    groups: list[Group] = Field(default_factory=list)
 
 
 class DefaultObservationPlanPost(BaseModel):
@@ -229,24 +257,39 @@ class DefaultObservationPlanPostResponse(BaseModel):
     id: int
 
 
-class DefaultObservationPlanRequest(BaseModel):
-    """A default (automated) observation plan request."""
+class DefaultSurveyEfficiencyRequest(BaseModel):
+    """A default efficiency request (upstream ``DefaultSurveyEfficiencyRequest``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    default_observationplan_request_id: int | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    default_observationplan_request: dict[str, Any] | None = None
+
+
+class DefaultObservationPlanRequest(BaseModel):
+    """A default observation plan (upstream ``DefaultObservationPlanRequest``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     requester_id: int | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
     filters: dict[str, Any] | None = None
     allocation_id: int | None = None
     default_plan_name: str | None = None
     auto_send: bool | None = None
-    allocation: dict[str, Any] | None = None
-    requester: dict[str, Any] | None = None
-    target_groups: list[dict[str, Any]] | None = None
-    default_survey_efficiencies: list[dict[str, Any]] | None = None
+    allocation: Allocation | None = None
+    requester: User | None = None
+    target_groups: list[Group] = Field(default_factory=list)
+    default_survey_efficiencies: list[DefaultSurveyEfficiencyRequest] = Field(
+        default_factory=list
+    )
 
 
 def post_observation_plan(

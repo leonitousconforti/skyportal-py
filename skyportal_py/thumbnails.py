@@ -2,22 +2,43 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Literal
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
 
+ThumbnailType = Literal[
+    "new",
+    "ref",
+    "sub",
+    "sdss",
+    "dr8",
+    "ls",
+    "ps1",
+    "sm",
+    "hst",
+    "chandra",
+    "jwst",
+    "new_gz",
+    "ref_gz",
+    "sub_gz",
+]
+"""Thumbnail types SkyPortal accepts (upstream ``THUMBNAIL_TYPES``)."""
+
 
 class Thumbnail(BaseModel):
-    """A thumbnail image centered on the location of an object."""
+    """A thumbnail image centered on an object (upstream ``Thumbnail``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     obj_id: str | None = None
-    type: str | None = None
+    type: ThumbnailType | None = None
     file_uri: str | None = None
     public_url: str | None = None
     origin: str | None = None
@@ -32,7 +53,7 @@ class ThumbnailPost(BaseModel):
 
     obj_id: str
     data: str
-    ttype: str
+    ttype: ThumbnailType
     survey: str | None = None
 
 
@@ -97,7 +118,7 @@ def update_thumbnail(  # noqa: PLR0913 -- mirrors the endpoint's body parameters
     thumbnail_id: int,
     *,
     obj_id: str | None = None,
-    type: str | None = None,  # noqa: A002 -- mirrors the endpoint's field name
+    type: ThumbnailType | None = None,  # noqa: A002 -- mirrors the field name
     file_uri: str | None = None,
     public_url: str | None = None,
     origin: str | None = None,

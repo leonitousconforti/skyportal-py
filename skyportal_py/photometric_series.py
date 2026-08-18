@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,11 +16,21 @@ from skyportal_py.streams import Stream
 class PhotometricSeries(BaseModel):
     """A photometric series: one light curve of one object in one series."""
 
+    # ``PhotometricSeries.to_dict`` returns the mapper columns plus ``data``
+    # (the light curve in the requested ``dataFormat``), ``group_ids``,
+    # ``stream_ids``, ``groups`` and ``streams``; the group/stream entries are
+    # trimmed to a few columns. ``magref`` and ``e_magref`` are upstream hybrid
+    # properties derived from ``ref_flux``/``ref_fluxerr``: they are accepted on
+    # upload but are not part of the serialized output. ``obj``, ``instrument``,
+    # ``owner``, ``followup_request`` and ``assignment`` are lazy-loaded
+    # relationships that these endpoints never touch, so they are never
+    # returned.
+
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     obj_id: str | None = None
     series_name: str | None = None
     series_obj_id: str | None = None
@@ -42,7 +53,7 @@ class PhotometricSeries(BaseModel):
     exp_time: float | None = None
     frame_rate: float | None = None
     num_exp: int | None = None
-    time_stamp_alignment: str | None = None
+    time_stamp_alignment: Literal["start", "middle", "end"] | None = None
     limiting_mag: float | None = None
     ref_flux: float | None = None
     ref_fluxerr: float | None = None
@@ -70,7 +81,7 @@ class PhotometricSeries(BaseModel):
     stream_ids: list[int] = Field(default_factory=list)
     groups: list[Group] = Field(default_factory=list)
     streams: list[Stream] = Field(default_factory=list)
-    data: dict[str, Any] | str | None = None
+    data: dict[str, list[Any]] | str | None = None
 
 
 class PhotometricSeriesPage(BaseModel):
@@ -119,7 +130,7 @@ class PhotometricSeriesPost(BaseModel):
     ref_fluxerr: float | None = None
     followup_request_id: int | None = None
     assignment_id: int | None = None
-    time_stamp_alignment: str | None = None
+    time_stamp_alignment: Literal["start", "middle", "end"] | None = None
     altdata: dict[str, Any] | None = None
 
 

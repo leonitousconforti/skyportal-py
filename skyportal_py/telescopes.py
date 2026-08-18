@@ -2,25 +2,69 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Any
+
 import httpx
 from pydantic import BaseModel, ConfigDict
 
 from skyportal_py._http import unwrap
 
 
+class Ephemeris(BaseModel):
+    """Sun/twilight times computed for a telescope's site.
+
+    Returned by the single-allocation endpoint. Every value is ``None`` when
+    the telescope has no usable observer (no fixed location, or missing
+    coordinates), in which case the server sends an empty object instead.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    sunset_utc: str | None = None
+    sunrise_utc: str | None = None
+    twilight_morning_astronomical_utc: str | None = None
+    twilight_evening_astronomical_utc: str | None = None
+    twilight_morning_nautical_utc: str | None = None
+    twilight_evening_nautical_utc: str | None = None
+    utc_offset_hours: float | None = None
+    sunset_unix_ms: float | None = None
+    sunrise_unix_ms: float | None = None
+    twilight_morning_astronomical_unix_ms: float | None = None
+    twilight_evening_astronomical_unix_ms: float | None = None
+    twilight_morning_nautical_unix_ms: float | None = None
+    twilight_evening_nautical_unix_ms: float | None = None
+
+
 class Telescope(BaseModel):
-    """A SkyPortal telescope."""
+    """A SkyPortal telescope (upstream ``Telescope``).
+
+    ``instruments`` and ``allocations`` stay untyped: typing them with
+    ``instruments.Instrument`` / ``allocations.Allocation`` would create an
+    import cycle, as both of those models point back at ``Telescope``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    name: str
+    created_at: datetime | None = None
+    modified: datetime | None = None
+    name: str | None = None
     nickname: str | None = None
     lat: float | None = None
     lon: float | None = None
     elevation: float | None = None
+    mpc_obscode: str | None = None
     diameter: float | None = None
-    robotic: bool = False
+    skycam_link: str | None = None
+    weather_link: str | None = None
+    robotic: bool | None = None
+    fixed_location: bool | None = None
+    instruments: list[dict[str, Any]] | None = None
+    allocations: list[dict[str, Any]] | None = None
+    is_night_astronomical: bool | None = None
+    morning: str | bool | None = None
+    evening: str | bool | None = None
 
 
 def fetch_telescopes(client: httpx.Client) -> list[Telescope]:

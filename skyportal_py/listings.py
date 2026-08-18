@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 import httpx
@@ -11,13 +12,16 @@ from skyportal_py._http import unwrap
 
 
 class Listing(BaseModel):
-    """An object saved by a user to one of their named lists."""
+    """An object saved by a user to a named list (upstream ``Listing``)."""
+
+    # The handler returns bare ``Listing`` rows, so the ``user`` and ``obj``
+    # relationships are never loaded and are not declared here.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     user_id: int | None = None
     obj_id: str | None = None
     list_name: str | None = None

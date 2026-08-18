@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,7 +11,7 @@ from skyportal_py._http import unwrap, unwrap_content
 
 
 class ObjPosition(BaseModel):
-    """A photometry-derived position for an object."""
+    """A photometry-derived position for an object (upstream ``Obj``)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -24,7 +26,7 @@ class ObjPosition(BaseModel):
 
 
 class SuperObjMember(BaseModel):
-    """An object linked to a super-object, with its position."""
+    """An object linked to a super-object, with its position (upstream ``Obj``)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -34,14 +36,17 @@ class SuperObjMember(BaseModel):
 
 
 class SuperObj(BaseModel):
-    """A super-object linking several objects that are one astrophysical source."""
+    """Several objects that are one astrophysical source (upstream ``SuperObj``)."""
+
+    # The handler builds this dict by hand: ``modified`` and the full ``Obj``
+    # rows behind ``objs`` exist upstream but are not returned.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
     name: str | None = None
     is_roid: bool | None = None
-    created_at: str | None = None
+    created_at: datetime | None = None
     objs: list[SuperObjMember] = Field(default_factory=list)
 
 

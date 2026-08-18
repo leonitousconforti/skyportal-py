@@ -2,23 +2,116 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.annotations import Annotation
+from skyportal_py.classifications import Classification
+from skyportal_py.comments import Comment
+from skyportal_py.galaxies import Galaxy
+from skyportal_py.groups import Group
+from skyportal_py.tags import ObjTag
+from skyportal_py.thumbnails import Thumbnail
+
+
+class CandidatePassingAlert(BaseModel):
+    """One alert that made an object pass a filter (upstream ``Candidate``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    filter_id: int | None = None
+    passing_alert_id: int | None = None
+    passed_at: datetime | None = None
+
+
+class CandidateAssociatedObj(BaseModel):
+    """Another object linked to a candidate through a ``SuperObj``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    obj_id: str | None = None
+    ra: float | None = None
+    dec: float | None = None
+    separation: float | None = None
+    super_obj_id: int | None = None
+    super_obj_name: str | None = None
 
 
 class Candidate(BaseModel):
-    """A SkyPortal candidate."""
+    """An object that passed a filter (upstream ``Obj``, scanning view).
+
+    The candidate endpoints serialize the ``Obj`` itself and graft the
+    scanning extras onto it, so every ``Obj`` column appears here. The
+    ``photometry``, ``spectra`` and ``followup_requests`` payloads keep
+    their eager-loaded relationships inline and stay ``dict``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: str
+    created_at: datetime | None = None
+    modified: datetime | None = None
     ra: float | None = None
     dec: float | None = None
+    ra_dis: float | None = None
+    dec_dis: float | None = None
+    ra_err: float | None = None
+    dec_err: float | None = None
+    offset: float | None = None
+    t0: float | None = None
     redshift: float | None = None
+    redshift_error: float | None = None
+    redshift_origin: str | None = None
+    redshift_history: list[dict[str, Any]] | None = None
+    host_id: int | None = None
+    summary: str | None = None
+    summary_history: list[dict[str, Any]] | None = None
+    altdata: dict[str, Any] | None = None
+    dist_nearest_source: float | None = None
+    mag_nearest_source: float | None = None
+    e_mag_nearest_source: float | None = None
+    transient: bool | None = None
+    varstar: bool | None = None
+    is_roid: bool | None = None
+    mpc_name: str | None = None
+    tns_name: str | None = None
+    tns_info: dict[str, Any] | None = None
+    score: float | None = None
+    origin: str | None = None
+    alias: list[str] | None = None
+    healpix: int | None = None
+    detect_photometry_count: int | None = None
+    internal_key: str | None = None
+
+    # Relationships the handlers eager-load.
+    thumbnails: list[Thumbnail] | None = None
+    photstats: list[dict[str, Any]] | None = None
+    host: Galaxy | None = None
+
+    # Keys the handlers inject.
+    is_source: bool | int | None = None
+    saved_groups: list[Group] | None = None
+    classifications: list[Classification] | None = None
+    passing_group_ids: list[int] | None = None
+    filter_ids: list[int] | None = None
+    passing_alerts: list[CandidatePassingAlert] | None = None
+    tags: list[ObjTag] | None = None
+    annotations: list[Annotation] | None = None
+    comments: list[Comment] | None = None
+    photometry: list[dict[str, Any]] | None = None
+    spectra: list[dict[str, Any]] | None = None
+    followup_requests: list[dict[str, Any]] | None = None
+    associated_objs: list[CandidateAssociatedObj] | None = None
+    last_detected_at: datetime | None = None
+    gal_lon: float | None = None
+    gal_lat: float | None = None
+    luminosity_distance: float | None = None
+    dm: float | None = None
+    angular_diameter_distance: float | None = None
 
 
 class CandidatesPage(BaseModel):
@@ -30,10 +123,16 @@ class CandidatesPage(BaseModel):
     total_matches: int = Field(alias="totalMatches")
     page_number: int = Field(alias="pageNumber", default=1)
     num_per_page: int = Field(alias="numPerPage", default=25)
+    query_id: str | None = Field(alias="queryID", default=None)
 
 
 class CandidatePost(BaseModel):
-    """Payload for posting a new candidate."""
+    """Payload for posting a new candidate.
+
+    Beyond the candidate's own fields, the server loads the body with the
+    ``Obj`` schema, so any ``Obj`` column may be set when the object does
+    not exist yet (and is updated in place when it does).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -42,6 +141,32 @@ class CandidatePost(BaseModel):
     dec: float
     filter_ids: list[int]
     passed_at: str
+    passing_alert_id: int | None = None
+    ra_dis: float | None = None
+    dec_dis: float | None = None
+    ra_err: float | None = None
+    dec_err: float | None = None
+    offset: float | None = None
+    t0: float | None = None
+    redshift: float | None = None
+    redshift_error: float | None = None
+    redshift_origin: str | None = None
+    host_id: int | None = None
+    summary: str | None = None
+    altdata: dict[str, Any] | None = None
+    dist_nearest_source: float | None = None
+    mag_nearest_source: float | None = None
+    e_mag_nearest_source: float | None = None
+    transient: bool | None = None
+    varstar: bool | None = None
+    is_roid: bool | None = None
+    mpc_name: str | None = None
+    tns_name: str | None = None
+    tns_info: dict[str, Any] | None = None
+    score: float | None = None
+    origin: str | None = None
+    alias: list[str] | None = None
+    detect_photometry_count: int | None = None
 
 
 class CandidatePostResponse(BaseModel):
@@ -130,16 +255,16 @@ def post_candidate(
 
 
 class CandidateRecord(BaseModel):
-    """One row of the ``candidates`` table: an Obj that passed a Filter."""
+    """One row of the ``candidates`` table (upstream ``Candidate``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     obj_id: str | None = None
     filter_id: int | None = None
-    passed_at: str | None = None
+    passed_at: datetime | None = None
     passing_alert_id: int | None = None
     uploader_id: int | None = None
 
@@ -195,17 +320,21 @@ class ScanReportPost(BaseModel):
 
 
 class ScanReport(BaseModel):
-    """A candidate scanning report."""
+    """A candidate scanning report (upstream ``ScanReport``).
+
+    ``author`` is the author's username, which the handler substitutes for
+    the ``author`` relationship before returning the report.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     author_id: int | None = None
     author: str | None = None
     options: dict[str, Any] | None = None
-    groups: list[dict[str, Any]] | None = None
+    groups: list[Group] | None = None
 
 
 class ScanReportsPage(BaseModel):
@@ -225,8 +354,8 @@ class ScanReportItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime | None = None
+    modified: datetime | None = None
     obj_id: str | None = None
     scan_report_id: int | None = None
     data: dict[str, Any] | None = None

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,13 +11,15 @@ from skyportal_py._http import unwrap
 
 
 class Role(BaseModel):
-    """A SkyPortal role: a named collection of ACLs."""
+    """A named collection of ACLs (upstream baselayer ``Role``)."""
+
+    # The handler replaces the ``acls`` relationship with a list of ACL IDs.
 
     model_config = ConfigDict(extra="forbid")
 
     id: str
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     acls: list[str] = Field(default_factory=list)
 
 

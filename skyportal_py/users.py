@@ -2,22 +2,45 @@
 
 from __future__ import annotations
 
+import datetime
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
+from skyportal_py.streams import Stream
 
 
 class User(BaseModel):
-    """A SkyPortal user."""
+    """A SkyPortal user (upstream baselayer ``User``)."""
+
+    # SkyPortal overrides ``User.to_dict`` to return the table columns only,
+    # minus ``preferences``; ``roles``/``acls``/``permissions``/``gravatar_url``
+    # and, for system admins, ``groups``/``streams`` are injected by the
+    # handler.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     username: str
     first_name: str | None = None
     last_name: str | None = None
+    bio: str | None = None
+    affiliations: list[str] = Field(default_factory=list)
     contact_email: str | None = None
+    contact_phone: str | None = None
+    oauth_uid: str | None = None
+    is_bot: bool | None = None
+    expiration_date: datetime.datetime | None = None
+    permissions: list[str] = Field(default_factory=list)
+    roles: list[str] = Field(default_factory=list)
+    acls: list[str] = Field(default_factory=list)
+    gravatar_url: str | None = None
+    groups: list[Group] | None = None
+    streams: list[Stream] | None = None
 
 
 class UsersPage(BaseModel):

@@ -2,34 +2,41 @@
 
 from __future__ import annotations
 
-from typing import Any
+import datetime
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
+from skyportal_py.roles import Role
+from skyportal_py.streams import Stream
+from skyportal_py.users import User
 
 
 class Invitation(BaseModel):
-    """An invitation for a new user to join the instance."""
+    """An invitation for a new user to join the instance (upstream ``Invitation``)."""
+
+    # The handler eager-loads ``groups``, ``streams`` and ``invited_by``;
+    # ``role`` is only present when that relationship happens to be loaded.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     token: str | None = None
     user_email: str | None = None
     role_id: str | None = None
-    role: dict[str, Any] | None = None
+    role: Role | None = None
     admin_for_groups: list[bool] | None = None
     can_save_to_groups: list[bool] | None = None
     can_share_photometry_for_groups: list[bool] | None = None
     used: bool | None = None
-    user_expiration_date: str | None = None
-    groups: list[dict[str, Any]] | None = None
-    streams: list[dict[str, Any]] | None = None
-    invited_by: dict[str, Any] | None = None
+    user_expiration_date: datetime.datetime | None = None
+    groups: list[Group] | None = None
+    streams: list[Stream] | None = None
+    invited_by: User | None = None
 
 
 class InvitationsPage(BaseModel):

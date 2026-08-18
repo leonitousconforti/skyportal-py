@@ -2,49 +2,115 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
+from skyportal_py.users import User
 
 
 class ShiftUserMembership(BaseModel):
-    """A user's membership in a shift."""
+    """A user's membership in a shift (upstream ``ShiftUser``).
+
+    ``username``, ``first_name`` and ``last_name`` are copied up from the
+    nested ``user`` by the single-shift handler.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     shift_id: int | None = None
     user_id: int | None = None
     admin: bool | None = None
     needs_replacement: bool | None = None
+    user: User | None = None
     username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
 
 
-class Shift(BaseModel):
-    """A group scanning shift."""
+class ShiftCommentAuthor(User):
+    """A shift comment's author, with the gravatar URL the handler adds."""
+
+    gravatar_url: str | None = None
+
+
+class ShiftComment(BaseModel):
+    """A comment posted about a shift (upstream ``CommentOnShift``).
+
+    The handler strips ``attachment_bytes`` and tags each comment with
+    ``resourceType``.
+    """
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    text: str | None = None
+    attachment_name: str | None = None
+    origin: str | None = None
+    bot: bool | None = None
+    author_id: int | None = None
+    shift_id: int | None = None
+    author: ShiftCommentAuthor | None = None
+    groups: list[Group] = Field(default_factory=list)
+    resource_type: str | None = Field(alias="resourceType", default=None)
+
+
+class ShiftGroupMember(BaseModel):
+    """A member of a shift's group, as returned alongside a single shift."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    expiration_date: datetime.datetime | None = None
+
+
+class ShiftGroup(BaseModel):
+    """A shift's group, as hand-assembled by the single-shift handler."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str | None = None
+    has_admin_access: bool | None = None
+    group_users: list[ShiftGroupMember] = Field(default_factory=list)
+
+
+class Shift(BaseModel):
+    """A group scanning shift (upstream ``Shift``).
+
+    ``shift_users_ids`` is a column property (an aggregate of the shift's
+    user IDs), so it is present even when no relationship is loaded.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     name: str | None = None
     description: str | None = None
-    start_date: str | None = None
-    end_date: str | None = None
+    start_date: datetime.datetime | None = None
+    end_date: datetime.datetime | None = None
     group_id: int | None = None
     required_users_number: int | None = None
     shift_users_ids: list[int] | None = None
-    shift_users: list[ShiftUserMembership] | None = None
-    comments: list[dict[str, Any]] | None = None
-    group: dict[str, Any] | None = None
+    shift_users: list[ShiftUserMembership] = Field(default_factory=list)
+    users: list[User] = Field(default_factory=list)
+    comments: list[ShiftComment] = Field(default_factory=list)
+    reminders: list[dict[str, Any]] = Field(default_factory=list)
+    group: ShiftGroup | None = None
 
 
 class ShiftPost(BaseModel):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 import httpx
@@ -11,13 +12,19 @@ from skyportal_py._http import unwrap
 
 
 class Stream(BaseModel):
-    """An alert stream, e.g. a survey's public alerts."""
+    """An alert stream, e.g. a survey's public alerts (upstream ``Stream``)."""
+
+    # No handler eager-loads Stream.groups/users/filters/photometry, so those
+    # relationships never appear in a serialized Stream and are not declared.
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     name: str
     altdata: dict[str, Any] | None = None
+    auto_join: bool | None = None
 
 
 class StreamPostResponse(BaseModel):

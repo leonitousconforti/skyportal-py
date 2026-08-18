@@ -2,25 +2,46 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
+from skyportal_py.groups import Group
 
 
 class Annotation(BaseModel):
-    """A machine-generated annotation on a source."""
+    """An annotation on any annotatable resource (upstream ``Annotation``).
+
+    Upstream splits annotations across ``Annotation``,
+    ``AnnotationOnSpectrum`` and ``AnnotationOnPhotometry``; this model is
+    the union of that family, so each type-specific foreign key is
+    optional and only the ones belonging to the annotation's own table are
+    ever set. ``data`` is a free-form JSONB column. ``author`` is the
+    author's ``User.to_dict()``, and ``obj``, ``spectrum`` and
+    ``photometry`` stay ``dict`` to avoid importing in a circle from the
+    modules that import this one.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    obj_id: str | None = None
-    origin: str
+    created_at: datetime | None = None
+    modified: datetime | None = None
     data: dict[str, Any] = Field(default_factory=dict)
+    origin: str | None = None
     author_id: int | None = None
-    created_at: str | None = None
+    author: dict[str, Any] | None = None
+    groups: list[Group] = Field(default_factory=list)
+    obj_id: str | None = None
+    spectrum_id: int | None = None
+    photometry_id: int | None = None
+    obj: dict[str, Any] | None = None
+    spectrum: dict[str, Any] | None = None
+    photometry: dict[str, Any] | None = None
+    type: str | None = None
 
 
 class AnnotationPostResponse(BaseModel):
@@ -125,22 +146,13 @@ def delete_annotation(client: httpx.Client, obj_id: str, annotation_id: int) -> 
     unwrap(client.delete(f"/api/sources/{obj_id}/annotations/{annotation_id}"))
 
 
-class AnnotationDetail(BaseModel):
-    """An annotation on any resource type, with every stored field."""
+class AnnotationDetail(Annotation):
+    """A single annotation, as returned by the single-annotation endpoint.
 
-    model_config = ConfigDict(extra="forbid")
-
-    id: int
-    created_at: str | None = None
-    modified: str | None = None
-    data: dict[str, Any] = Field(default_factory=dict)
-    origin: str | None = None
-    author_id: int | None = None
-    author: dict[str, Any] | None = None
-    groups: list[dict[str, Any]] = Field(default_factory=list)
-    obj_id: str | None = None
-    spectrum_id: int | None = None
-    photometry_id: int | None = None
+    The list and single-GET routes both return ``Annotation.to_dict()``
+    with the groups eager-loaded, so this is :class:`Annotation` under the
+    name the single-annotation endpoint is documented with.
+    """
 
 
 def fetch_annotation(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 from typing import Any
 
@@ -9,20 +10,28 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap, unwrap_content
+from skyportal_py.instruments import Instrument, InstrumentField
 
 
 class Observation(BaseModel):
-    """An executed or queued survey observation."""
+    """A survey observation (upstream ``ExecutedObservation``/``QueuedObservation``).
+
+    The endpoint returns either kind depending on ``observation_status``,
+    so the executed-only fields (``observation_id``, ``airmass``,
+    ``seeing``, ``limmag``, ``target_name``, ``processed_fraction``) and
+    the queued-only ones (``queue_name``, ``validity_window_start`` and
+    ``validity_window_end``) are all optional.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     id: int
-    created_at: str | None = None
-    modified: str | None = None
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
     instrument_id: int | None = None
     instrument_field_id: int | None = None
     observation_id: int | None = None
-    obstime: str | None = None
+    obstime: datetime.datetime | None = None
     filt: str | None = None
     exposure_time: int | None = None
     airmass: float | None = None
@@ -31,9 +40,10 @@ class Observation(BaseModel):
     target_name: str | None = None
     processed_fraction: float | None = None
     queue_name: str | None = None
-    validity_window_start: str | None = None
-    validity_window_end: str | None = None
-    field: dict[str, Any] | None = None
+    validity_window_start: datetime.datetime | None = None
+    validity_window_end: datetime.datetime | None = None
+    field: InstrumentField | None = None
+    instrument: Instrument | None = None
 
 
 class ObservationsPage(BaseModel):
@@ -45,7 +55,7 @@ class ObservationsPage(BaseModel):
     total_matches: int = Field(alias="totalMatches", default=0)
     probability: float | None = None
     area: float | None = None
-    geojson: list[Any] | None = None
+    geojson: list[dict[str, Any]] | None = None
     field_ids: list[int] | None = None
     min_observations_per_field: int | None = None
 
