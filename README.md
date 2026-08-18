@@ -64,3 +64,16 @@ uv run pytest
 uv run ruff check
 uv run ty check
 ```
+
+### Tests
+
+The tests run against a real SkyPortal instance and skip when none is
+configured. CI boots one per job with `scripts/integration-up.sh` (a
+pinned checkout of skyportal's own compose stack: web app, PostgreSQL,
+and Valkey), caching the built image in GHCR keyed on the pinned ref in
+the script. To run them yourself, point them at an instance and an
+admin API token:
+
+```sh
+SKYPORTAL_TEST_URL=... SKYPORTAL_TEST_TOKEN=... uv run pytest
+```

@@ -1,5 +1,6 @@
 .venv
 .direnv
+.skyportal
 
 *.egg-info
 **/*.pyc
