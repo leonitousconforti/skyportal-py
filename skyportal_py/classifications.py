@@ -5,15 +5,11 @@ from __future__ import annotations
 import httpx
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model, ResponseModel
+from skyportal_py._models import Model
 
 
-class Classification(ResponseModel):
-    """A classification of a source.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Classification(Model):
+    """A classification of a source."""
 
     id: int
     obj_id: str
@@ -33,7 +29,7 @@ class ClassificationPost(Model):
     group_ids: list[int] | None = None
 
 
-class ClassificationPostResponse(ResponseModel):
+class ClassificationPostResponse(Model):
     """Result of posting a classification."""
 
     classification_id: int

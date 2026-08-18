@@ -6,15 +6,11 @@ import httpx
 from pydantic import Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model, ResponseModel
+from skyportal_py._models import Model
 
 
-class PhotometryPoint(ResponseModel):
-    """A single photometry point of a source.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class PhotometryPoint(Model):
+    """A single photometry point of a source."""
 
     id: int
     obj_id: str
@@ -50,7 +46,7 @@ class PhotometryPost(Model):
     group_ids: list[int] | None = None
 
 
-class PhotometryPostResponse(ResponseModel):
+class PhotometryPostResponse(Model):
     """Result of posting photometry."""
 
     ids: list[int] = Field(default_factory=list)

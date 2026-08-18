@@ -6,15 +6,11 @@ import httpx
 from pydantic import Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model, ResponseModel
+from skyportal_py._models import Model
 
 
-class Spectrum(ResponseModel):
-    """A spectrum of a source.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Spectrum(Model):
+    """A spectrum of a source."""
 
     id: int
     obj_id: str
@@ -39,15 +35,16 @@ class SpectrumPost(Model):
     group_ids: list[int] | None = None
 
 
-class SpectrumPostResponse(ResponseModel):
+class SpectrumPostResponse(Model):
     """Result of posting a spectrum."""
 
     id: int
 
 
-class _SourceSpectra(ResponseModel):
+class _SourceSpectra(Model):
     """Envelope of a source's spectra response."""
 
+    obj_id: str | None = None
     spectra: list[Spectrum] = Field(default_factory=list)
 
 

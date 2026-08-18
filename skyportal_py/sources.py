@@ -6,16 +6,12 @@ import httpx
 from pydantic import ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import Model, ResponseModel
+from skyportal_py._models import Model
 from skyportal_py.groups import Group
 
 
-class Source(ResponseModel):
-    """A SkyPortal source.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Source(Model):
+    """A SkyPortal source."""
 
     id: str
     ra: float | None = None
@@ -24,7 +20,7 @@ class Source(ResponseModel):
     groups: list[Group] = Field(default_factory=list)
 
 
-class SourcesPage(ResponseModel):
+class SourcesPage(Model):
     """One page of results from a sources query."""
 
     model_config = ConfigDict(validate_by_name=True)
@@ -44,7 +40,7 @@ class SourcePost(Model):
     group_ids: list[int] | None = None
 
 
-class SourcePostResponse(ResponseModel):
+class SourcePostResponse(Model):
     """Result of saving a new source."""
 
     id: str

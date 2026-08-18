@@ -8,15 +8,11 @@ import httpx
 from pydantic import ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import ResponseModel
+from skyportal_py._models import Model
 
 
-class Taxonomy(ResponseModel):
-    """A classification taxonomy.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Taxonomy(Model):
+    """A classification taxonomy."""
 
     model_config = ConfigDict(validate_by_name=True)
 

@@ -6,15 +6,11 @@ import httpx
 from pydantic import Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import ResponseModel
+from skyportal_py._models import Model
 
 
-class Group(ResponseModel):
-    """A SkyPortal group.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Group(Model):
+    """A SkyPortal group."""
 
     id: int
     name: str
@@ -22,7 +18,7 @@ class Group(ResponseModel):
     single_user_group: bool = False
 
 
-class GroupsResponse(ResponseModel):
+class GroupsResponse(Model):
     """The groups visible to the token, split by relationship to the user."""
 
     user_groups: list[Group] = Field(default_factory=list)

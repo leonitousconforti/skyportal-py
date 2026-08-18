@@ -6,15 +6,11 @@ import httpx
 from pydantic import ConfigDict, Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import ResponseModel
+from skyportal_py._models import Model
 
 
-class User(ResponseModel):
-    """A SkyPortal user.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class User(Model):
+    """A SkyPortal user."""
 
     id: int
     username: str
@@ -23,7 +19,7 @@ class User(ResponseModel):
     contact_email: str | None = None
 
 
-class UsersPage(ResponseModel):
+class UsersPage(Model):
     """One page of results from a users query."""
 
     model_config = ConfigDict(validate_by_name=True)

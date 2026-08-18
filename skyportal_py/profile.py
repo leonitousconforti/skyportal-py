@@ -8,10 +8,10 @@ import httpx
 from pydantic import Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import ResponseModel
+from skyportal_py._models import Model
 
 
-class UserProfile(ResponseModel):
+class UserProfile(Model):
     """The user associated with the API token."""
 
     username: str

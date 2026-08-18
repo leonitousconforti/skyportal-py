@@ -5,15 +5,11 @@ from __future__ import annotations
 import httpx
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import ResponseModel
+from skyportal_py._models import Model
 
 
-class Comment(ResponseModel):
-    """A comment on a source.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Comment(Model):
+    """A comment on a source."""
 
     id: int
     text: str
@@ -22,7 +18,7 @@ class Comment(ResponseModel):
     created_at: str | None = None
 
 
-class CommentPostResponse(ResponseModel):
+class CommentPostResponse(Model):
     """Result of posting a comment."""
 
     comment_id: int

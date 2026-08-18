@@ -39,7 +39,7 @@ def test_fetch_groups(client: httpx.Client) -> None:
 
 @respx.mock
 def test_fetch_group(client: httpx.Client) -> None:
-    """A group response validates into a Group model, keeping extras."""
+    """A group response validates into a Group model."""
     respx.get(f"{BASE_URL}/api/groups/1").mock(
         return_value=httpx.Response(
             200,
@@ -49,7 +49,6 @@ def test_fetch_group(client: httpx.Client) -> None:
                     "id": 1,
                     "name": "Program A",
                     "single_user_group": False,
-                    "users": [{"id": 7, "username": "leo"}],
                 },
             },
         )
@@ -57,4 +56,4 @@ def test_fetch_group(client: httpx.Client) -> None:
     group = groups.fetch_group(client, 1)
     assert group.id == 1
     assert group.name == "Program A"
-    assert group.model_extra == {"users": [{"id": 7, "username": "leo"}]}
+    assert group.single_user_group is False

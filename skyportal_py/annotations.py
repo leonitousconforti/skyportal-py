@@ -8,15 +8,11 @@ import httpx
 from pydantic import Field
 
 from skyportal_py._http import unwrap
-from skyportal_py._models import ResponseModel
+from skyportal_py._models import Model
 
 
-class Annotation(ResponseModel):
-    """A machine-generated annotation on a source.
-
-    Only commonly used fields are modeled; everything else the server
-    returns is kept as extra attributes.
-    """
+class Annotation(Model):
+    """A machine-generated annotation on a source."""
 
     id: int
     obj_id: str | None = None
@@ -26,7 +22,7 @@ class Annotation(ResponseModel):
     created_at: str | None = None
 
 
-class AnnotationPostResponse(ResponseModel):
+class AnnotationPostResponse(Model):
     """Result of posting an annotation."""
 
     annotation_id: int
