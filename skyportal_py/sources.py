@@ -6,15 +6,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
-
-
-class Group(BaseModel):
-    """A SkyPortal group a source is saved to."""
-
-    model_config = ConfigDict(extra="allow")
-
-    id: int
-    name: str
+from skyportal_py.groups import Group
 
 
 class Source(BaseModel):

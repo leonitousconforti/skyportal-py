@@ -23,6 +23,13 @@ page = client.fetch_sources(num_per_page=10)  # -> SourcesPage
 source = client.fetch_source("ZTF20abcdef")  # -> Source
 client.post_source(sources.SourcePost(id="ZTF20abcdef", ra=10.5, dec=-20.25))
 
+my_groups = client.fetch_groups()  # -> GroupsResponse
+candidates_page = client.fetch_candidates(group_ids=[1])  # -> CandidatesPage
+lightcurve = client.fetch_photometry("ZTF20abcdef")  # -> list[PhotometryPoint]
+notes = client.fetch_comments("ZTF20abcdef")  # -> list[Comment]
+labels = client.fetch_classifications("ZTF20abcdef")  # -> list[Classification]
+client.post_comment("ZTF20abcdef", "spectrum looks like a SN Ia")
+
 # equivalently, call the functions directly with any httpx.Client:
 source = sources.fetch_source(client, "ZTF20abcdef")
 ```
@@ -35,7 +42,7 @@ function yet, use the httpx client directly and `unwrap` the envelope:
 ```python
 from skyportal_py import unwrap
 
-unwrap(client.post("/api/comment", json={"obj_id": "ZTF20abcdef", "text": "hi"}))
+unwrap(client.get("/api/taxonomy"))
 ```
 
 ## Development
