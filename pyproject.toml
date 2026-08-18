@@ -30,6 +30,7 @@ default-groups = ["dev", "test"]
 include = ["skyportal_py*"]
 
 [tool.setuptools_scm]
+local_scheme = "no-local-version"
 
 [tool.towncrier]
 directory = "changes.d"
