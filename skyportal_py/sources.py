@@ -308,12 +308,19 @@ class SourcePostResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-def fetch_source(
+def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     client: httpx.Client,
     obj_id: str,
     *,
     include_thumbnails: bool = False,
     include_photometry: bool = False,
+    include_color_magnitude: bool = False,
+    include_photometry_exists: bool = False,
+    include_detection_stats: bool = False,
+    include_period_exists: bool = False,
+    include_labellers: bool = False,
+    include_gcn_crossmatches: bool = False,
+    deduplicate_photometry: bool = False,
 ) -> Source:
     """Retrieve a single source by object ID.
 
@@ -327,15 +334,53 @@ def fetch_source(
         Include thumbnail data in the response.
     include_photometry : bool, optional
         Include the source's photometry in ``photometry``.
+    include_color_magnitude : bool, optional
+        Include the source's color/absolute-magnitude data in
+        ``color_magnitude``.
+    include_photometry_exists : bool, optional
+        Include whether any photometry exists, in ``photometry_exists``.
+    include_detection_stats : bool, optional
+        Include the aggregate photometry statistics in ``photstats``.
+    include_period_exists : bool, optional
+        Include whether a period annotation exists, in ``period_exists``.
+    include_labellers : bool, optional
+        Include the users who labelled the source, in ``labellers``.
+    include_gcn_crossmatches : bool, optional
+        Include the source's GCN event crossmatches, in ``gcn_crossmatch``.
+    deduplicate_photometry : bool, optional
+        With ``include_photometry``, drop photometry points duplicated
+        within a short time window.
     """
     response = client.get(
         f"/api/sources/{obj_id}",
         params={
             "includeThumbnails": include_thumbnails,
             "includePhotometry": include_photometry,
+            "includeColorMagnitude": include_color_magnitude,
+            "includePhotometryExists": include_photometry_exists,
+            "includeDetectionStats": include_detection_stats,
+            "includePeriodExists": include_period_exists,
+            "includeLabellers": include_labellers,
+            "includeGCNCrossmatches": include_gcn_crossmatches,
+            "deduplicatePhotometry": deduplicate_photometry,
         },
     )
     return Source.model_validate(unwrap(response))
+
+
+def source_exists(client: httpx.Client, obj_id: str) -> bool:
+    """Check whether a source with this object ID is accessible.
+
+    Uses the endpoint's HEAD form, which carries no body.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    obj_id : str
+        Object ID to check.
+    """
+    return client.head(f"/api/sources/{obj_id}").is_success
 
 
 def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
@@ -348,6 +393,36 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     dec: float | None = None,
     radius: float | None = None,
     group_ids: list[int] | None = None,
+    spatial_catalog_name: str | None = None,
+    spatial_catalog_entry_name: str | None = None,
+    remove_nested: bool | None = None,
+    saved_before: str | None = None,
+    saved_after: str | None = None,
+    saved_by_current_user: bool | None = None,
+    created_or_modified_after: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    has_spectrum: bool | None = None,
+    has_spectrum_before: str | None = None,
+    has_spectrum_after: str | None = None,
+    has_tns_name: bool | None = None,
+    has_followup_request: bool | None = None,
+    simbad_class: str | None = None,
+    classifications: list[str] | None = None,
+    nonclassifications: list[str] | None = None,
+    unclassified: bool | None = None,
+    min_redshift: float | None = None,
+    max_redshift: float | None = None,
+    min_peak_magnitude: float | None = None,
+    max_peak_magnitude: float | None = None,
+    min_latest_magnitude: float | None = None,
+    max_latest_magnitude: float | None = None,
+    annotations_filter: str | None = None,
+    annotations_filter_origin: str | None = None,
+    comments_filter: str | None = None,
+    rejected_source_ids: list[str] | None = None,
+    sort_by: str | None = None,
+    sort_order: str | None = None,
 ) -> SourcesPage:
     """Query saved sources, one page at a time.
 
@@ -363,23 +438,236 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Cone-search filter, all in degrees; provide all three together.
     group_ids : list of int, optional
         Restrict to sources saved to these groups.
+    spatial_catalog_name, spatial_catalog_entry_name : str, optional
+        Keep sources inside this entry of this spatial catalog; provide
+        both together.
+    remove_nested : bool, optional
+        Strip the nested ``thumbnails``/``annotations``/``groups`` payloads
+        from each source.
+    saved_before, saved_after : str, optional
+        Keep sources saved in this ISO-format (UTC) time range.
+    saved_by_current_user : bool, optional
+        Keep only sources the token's user saved.
+    created_or_modified_after : str, optional
+        Keep sources created or modified after this ISO-format time.
+    start_date, end_date : str, optional
+        Keep sources last detected in this ISO-format time range.
+    has_spectrum : bool, optional
+        Keep only sources with at least one spectrum.
+    has_spectrum_before, has_spectrum_after : str, optional
+        Keep sources with a spectrum observed before/after this ISO time.
+    has_tns_name : bool, optional
+        Keep only sources with a TNS name.
+    has_followup_request : bool, optional
+        Keep only sources with a follow-up request.
+    simbad_class : str, optional
+        Keep sources with this Simbad class.
+    classifications, nonclassifications : list of str, optional
+        Keep sources carrying / not carrying one of these
+        ``"taxonomy: classification"`` strings.
+    unclassified : bool, optional
+        Keep only sources without any classification.
+    min_redshift, max_redshift : float, optional
+        Redshift range filter.
+    min_peak_magnitude, max_peak_magnitude : float, optional
+        Peak-magnitude range filter.
+    min_latest_magnitude, max_latest_magnitude : float, optional
+        Latest-magnitude range filter.
+    annotations_filter : str, optional
+        Comma-separated ``key[:value:operator]`` annotation constraints.
+    annotations_filter_origin : str, optional
+        Comma-separated origins the annotations must come from.
+    comments_filter : str, optional
+        Partial-match filter on comment text.
+    rejected_source_ids : list of str, optional
+        Object IDs to exclude from the results.
+    sort_by, sort_order : str, optional
+        Sort column (a source column, ``"saved_at"``, ``"altdata.<key>"``
+        or ``"annotation.<origin>.<key>"``) and direction ("asc"/"desc").
     """
-    params: dict[str, str | int | float] = {
+    params: dict[str, str | int | float | bool] = {
         "pageNumber": page_number,
         "numPerPage": num_per_page,
+        **_sources_filter_params(
+            source_id=source_id,
+            ra=ra,
+            dec=dec,
+            radius=radius,
+            group_ids=group_ids,
+            spatial_catalog_name=spatial_catalog_name,
+            spatial_catalog_entry_name=spatial_catalog_entry_name,
+            remove_nested=remove_nested,
+            saved_before=saved_before,
+            saved_after=saved_after,
+            saved_by_current_user=saved_by_current_user,
+            created_or_modified_after=created_or_modified_after,
+            start_date=start_date,
+            end_date=end_date,
+            has_spectrum=has_spectrum,
+            has_spectrum_before=has_spectrum_before,
+            has_spectrum_after=has_spectrum_after,
+            has_tns_name=has_tns_name,
+            has_followup_request=has_followup_request,
+            simbad_class=simbad_class,
+            classifications=classifications,
+            nonclassifications=nonclassifications,
+            unclassified=unclassified,
+            min_redshift=min_redshift,
+            max_redshift=max_redshift,
+            min_peak_magnitude=min_peak_magnitude,
+            max_peak_magnitude=max_peak_magnitude,
+            min_latest_magnitude=min_latest_magnitude,
+            max_latest_magnitude=max_latest_magnitude,
+            annotations_filter=annotations_filter,
+            annotations_filter_origin=annotations_filter_origin,
+            comments_filter=comments_filter,
+            rejected_source_ids=rejected_source_ids,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        ),
     }
-    if source_id is not None:
-        params["sourceID"] = source_id
-    if ra is not None:
-        params["ra"] = ra
-    if dec is not None:
-        params["dec"] = dec
-    if radius is not None:
-        params["radius"] = radius
-    if group_ids is not None:
-        params["group_ids"] = ",".join(str(gid) for gid in group_ids)
     response = client.get("/api/sources", params=params)
     return SourcesPage.model_validate(unwrap(response))
+
+
+# Wire names of the sources-list filters, keyed by keyword-argument name.
+_SOURCES_FILTER_WIRE_NAMES = {
+    "source_id": "sourceID",
+    "ra": "ra",
+    "dec": "dec",
+    "radius": "radius",
+    "spatial_catalog_name": "spatialCatalogName",
+    "spatial_catalog_entry_name": "spatialCatalogEntryName",
+    "remove_nested": "removeNested",
+    "saved_before": "savedBefore",
+    "saved_after": "savedAfter",
+    "saved_by_current_user": "savedByCurrentUser",
+    "created_or_modified_after": "createdOrModifiedAfter",
+    "start_date": "startDate",
+    "end_date": "endDate",
+    "has_spectrum": "hasSpectrum",
+    "has_spectrum_before": "hasSpectrumBefore",
+    "has_spectrum_after": "hasSpectrumAfter",
+    "has_tns_name": "hasTNSname",
+    "has_followup_request": "hasFollowupRequest",
+    "simbad_class": "simbadClass",
+    "unclassified": "unclassified",
+    "min_redshift": "minRedshift",
+    "max_redshift": "maxRedshift",
+    "min_peak_magnitude": "minPeakMagnitude",
+    "max_peak_magnitude": "maxPeakMagnitude",
+    "min_latest_magnitude": "minLatestMagnitude",
+    "max_latest_magnitude": "maxLatestMagnitude",
+    "annotations_filter": "annotationsFilter",
+    "annotations_filter_origin": "annotationsFilterOrigin",
+    "comments_filter": "commentsFilter",
+    "sort_by": "sortBy",
+    "sort_order": "sortOrder",
+}
+
+
+def _sources_filter_params(
+    **kwargs: Any,  # noqa: ANN401 -- values are the caller's typed keyword arguments
+) -> dict[str, str | int | float | bool]:
+    """Map provided sources-list keyword arguments to wire query params."""
+    group_ids = kwargs.pop("group_ids", None)
+    classifications = kwargs.pop("classifications", None)
+    nonclassifications = kwargs.pop("nonclassifications", None)
+    rejected_source_ids = kwargs.pop("rejected_source_ids", None)
+    params: dict[str, str | int | float | bool] = {
+        _SOURCES_FILTER_WIRE_NAMES[name]: value
+        for name, value in kwargs.items()
+        if value is not None
+    }
+    if group_ids is not None:
+        params["group_ids"] = ",".join(str(gid) for gid in group_ids)
+    if classifications is not None:
+        params["classifications"] = ",".join(classifications)
+    if nonclassifications is not None:
+        params["nonclassifications"] = ",".join(nonclassifications)
+    if rejected_source_ids is not None:
+        params["rejectedSourceIDs"] = ",".join(rejected_source_ids)
+    return params
+
+
+class SavedSource(BaseModel):
+    """A row of the save-summary form of the sources query.
+
+    The upstream ``Source`` join-table record between an object and the
+    group it is saved to, rather than the object itself.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime.datetime | None = None
+    modified: datetime.datetime | None = None
+    obj_id: str
+    group_id: int | None = None
+    saved_by_id: int | None = None
+    saved_at: datetime.datetime | None = None
+    active: bool | None = None
+    requested: bool | None = None
+    unsaved_by_id: int | None = None
+    unsaved_at: datetime.datetime | None = None
+
+
+class SourcesSaveSummaryPage(BaseModel):
+    """One page of results from a save-summary sources query."""
+
+    model_config = ConfigDict(extra="forbid", validate_by_name=True)
+
+    sources: list[SavedSource] = Field(default_factory=list)
+    total_matches: int | None = Field(alias="totalMatches", default=None)
+    page_number: int = Field(alias="pageNumber", default=1)
+    num_per_page: int = Field(alias="numPerPage", default=100)
+    group_id: int | None = None
+    query_id: str | None = Field(alias="queryID", default=None)
+
+
+def fetch_sources_save_summary(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
+    client: httpx.Client,
+    *,
+    page_number: int = 1,
+    num_per_page: int = 100,
+    group_ids: list[int] | None = None,
+    saved_before: str | None = None,
+    saved_after: str | None = None,
+    sort_by: str | None = None,
+    sort_order: str | None = None,
+) -> SourcesSaveSummaryPage:
+    """Query when and by whom sources were saved, one page at a time.
+
+    The ``saveSummary`` form of the sources query returns the save records
+    (object ID, group, saver, time) instead of the objects themselves.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    page_number, num_per_page : int, optional
+        Pagination controls.
+    group_ids : list of int, optional
+        Restrict to sources saved to these groups.
+    saved_before, saved_after : str, optional
+        Keep sources saved in this ISO-format (UTC) time range.
+    sort_by, sort_order : str, optional
+        Sort column (e.g. ``"saved_at"``) and direction ("asc"/"desc").
+    """
+    params: dict[str, str | int | float | bool] = {
+        "pageNumber": page_number,
+        "numPerPage": num_per_page,
+        "saveSummary": True,
+        **_sources_filter_params(
+            group_ids=group_ids,
+            saved_before=saved_before,
+            saved_after=saved_after,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        ),
+    }
+    response = client.get("/api/sources", params=params)
+    return SourcesSaveSummaryPage.model_validate(unwrap(response))
 
 
 def post_source(client: httpx.Client, payload: SourcePost) -> SourcePostResponse:
@@ -399,13 +687,16 @@ def post_source(client: httpx.Client, payload: SourcePost) -> SourcePostResponse
     return SourcePostResponse.model_validate(unwrap(response))
 
 
-def update_source(
+def update_source(  # noqa: PLR0913 -- mirrors the endpoint's body parameters
     client: httpx.Client,
     obj_id: str,
     *,
     ra: float | None = None,
     dec: float | None = None,
     redshift: float | None = None,
+    transient: bool | None = None,
+    ra_dis: float | None = None,
+    altdata: dict[str, Any] | None = None,
 ) -> None:
     """Update fields of an existing source.
 
@@ -421,8 +712,19 @@ def update_source(
         New coordinates, in degrees.
     redshift : float, optional
         New redshift.
+    transient : bool, optional
+        Whether the source is an astrophysical transient.
+    ra_dis, altdata : optional
+        Discovery right ascension and misc. metadata stored as JSON.
     """
-    fields = {"ra": ra, "dec": dec, "redshift": redshift}
+    fields = {
+        "ra": ra,
+        "dec": dec,
+        "redshift": redshift,
+        "transient": transient,
+        "ra_dis": ra_dis,
+        "altdata": altdata,
+    }
     payload = {name: value for name, value in fields.items() if value is not None}
     unwrap(client.patch(f"/api/sources/{obj_id}", json=payload))
 

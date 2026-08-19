@@ -142,6 +142,7 @@ class SkyPortal(httpx.Client):
     post_broker_filter_module = brokers.post_broker_filter_module
     update_broker_filter_module = brokers.update_broker_filter_module
     fetch_candidate = candidates.fetch_candidate
+    candidate_exists = candidates.candidate_exists
     fetch_candidates = candidates.fetch_candidates
     post_candidate = candidates.post_candidate
     delete_candidate = candidates.delete_candidate
@@ -156,6 +157,7 @@ class SkyPortal(httpx.Client):
     post_gaia_alerts_query = catalog_queries.post_gaia_alerts_query
     fetch_classifications = classifications.fetch_classifications
     post_classification = classifications.post_classification
+    post_classifications = classifications.post_classifications
     delete_classification = classifications.delete_classification
     fetch_classification = classifications.fetch_classification
     fetch_classifications_query = classifications.fetch_classifications_query
@@ -484,7 +486,9 @@ class SkyPortal(httpx.Client):
     post_source_groups = source_groups.post_source_groups
     update_source_group = source_groups.update_source_group
     fetch_source = sources.fetch_source
+    source_exists = sources.source_exists
     fetch_sources = sources.fetch_sources
+    fetch_sources_save_summary = sources.fetch_sources_save_summary
     post_source = sources.post_source
     update_source = sources.update_source
     delete_source = sources.delete_source

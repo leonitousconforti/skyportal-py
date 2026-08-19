@@ -94,6 +94,14 @@ class ClassificationPostResponse(BaseModel):
     classification_id: int
 
 
+class ClassificationsPostResponse(BaseModel):
+    """Result of posting a batch of classifications."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    classification_ids: list[int] = Field(default_factory=list)
+
+
 def fetch_classifications(client: httpx.Client, obj_id: str) -> list[Classification]:
     """Retrieve the classifications of a source.
 
@@ -127,6 +135,31 @@ def post_classification(
         "/api/classification", json=payload.model_dump(exclude_none=True)
     )
     return ClassificationPostResponse.model_validate(unwrap(response))
+
+
+def post_classifications(
+    client: httpx.Client,
+    payloads: list[ClassificationPost],
+) -> ClassificationsPostResponse:
+    """Post several classifications in one request.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    payloads : list of ClassificationPost
+        The classifications to post; same semantics as
+        :func:`post_classification`, applied per entry.
+    """
+    response = client.post(
+        "/api/classification",
+        json={
+            "classifications": [
+                payload.model_dump(exclude_none=True) for payload in payloads
+            ]
+        },
+    )
+    return ClassificationsPostResponse.model_validate(unwrap(response))
 
 
 def delete_classification(client: httpx.Client, classification_id: int) -> None:

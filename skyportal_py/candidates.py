@@ -119,8 +119,10 @@ class CandidatesPage(BaseModel):
 
     model_config = ConfigDict(extra="forbid", validate_by_name=True)
 
+    # The name-only autocomplete form returns bare {"candidates": [...]}
+    # with no pagination keys, so totalMatches cannot be required.
     candidates: list[Candidate]
-    total_matches: int = Field(alias="totalMatches")
+    total_matches: int | None = Field(alias="totalMatches", default=None)
     page_number: int = Field(alias="pageNumber", default=1)
     num_per_page: int = Field(alias="numPerPage", default=25)
     query_id: str | None = Field(alias="queryID", default=None)
@@ -177,7 +179,13 @@ class CandidatePostResponse(BaseModel):
     ids: list[int] = Field(default_factory=list)
 
 
-def fetch_candidate(client: httpx.Client, obj_id: str) -> Candidate:
+def fetch_candidate(
+    client: httpx.Client,
+    obj_id: str,
+    *,
+    include_photometry: bool = False,
+    include_spectra: bool = False,
+) -> Candidate:
     """Retrieve a single candidate by object ID.
 
     Parameters
@@ -186,9 +194,34 @@ def fetch_candidate(client: httpx.Client, obj_id: str) -> Candidate:
         Client from :func:`skyportal_py.create_client`.
     obj_id : str
         Object ID of the candidate, e.g. ``"ZTF20abcdef"``.
+    include_photometry : bool, optional
+        Include the candidate's photometry in ``photometry``.
+    include_spectra : bool, optional
+        Include the candidate's spectra in ``spectra``.
     """
-    response = client.get(f"/api/candidates/{obj_id}")
+    response = client.get(
+        f"/api/candidates/{obj_id}",
+        params={
+            "includePhotometry": include_photometry,
+            "includeSpectra": include_spectra,
+        },
+    )
     return Candidate.model_validate(unwrap(response))
+
+
+def candidate_exists(client: httpx.Client, obj_id: str) -> bool:
+    """Check whether a candidate with this object ID exists.
+
+    Uses the endpoint's HEAD form, which carries no body.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    obj_id : str
+        Object ID to check.
+    """
+    return client.head(f"/api/candidates/{obj_id}").is_success
 
 
 def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
@@ -200,6 +233,20 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     saved_status: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    obj_id: str | None = None,
+    name_only: bool | None = None,
+    include_photometry: bool = False,
+    sort_by_annotation_origin: str | None = None,
+    sort_by_annotation_key: str | None = None,
+    annotation_filter_list: str | None = None,
+    classifications: list[str] | None = None,
+    min_redshift: float | None = None,
+    max_redshift: float | None = None,
+    query_id: str | None = None,
+    photometry_annotations_filter: str | None = None,
+    photometry_annotations_filter_origin: str | None = None,
+    photometry_annotations_filter_before: str | None = None,
+    photometry_annotations_filter_after: str | None = None,
 ) -> CandidatesPage:
     """Query candidates, one page at a time.
 
@@ -217,19 +264,62 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     start_date, end_date : str, optional
         Restrict to candidates that passed a filter in this ISO-format
         (UTC) time range.
+    obj_id : str, optional
+        Partial object ID to autocomplete against.
+    name_only : bool, optional
+        With ``obj_id``, return only the matching object IDs.
+    include_photometry : bool, optional
+        Include each candidate's photometry in ``photometry``.
+    sort_by_annotation_origin, sort_by_annotation_key : str, optional
+        Sort the page by this annotation key from this origin; provide
+        both together.
+    annotation_filter_list : str, optional
+        JSON-encoded list of ``{"origin", "key", "min"/"max"/"value"}``
+        annotation constraints, as the frontend scanner sends it.
+    classifications : list of str, optional
+        Keep candidates carrying one of these classifications.
+    min_redshift, max_redshift : float, optional
+        Redshift range filter.
+    query_id : str, optional
+        Replay a previously cached query; the response's ``query_id``
+        identifies the cache entry.
+    photometry_annotations_filter : str, optional
+        Comma-separated ``key[:value:operator]`` constraints on photometry
+        annotations.
+    photometry_annotations_filter_origin : str, optional
+        Comma-separated origins the photometry annotations must come from.
+    photometry_annotations_filter_before, photometry_annotations_filter_after : str, optional
+        ISO-format bounds on the photometry annotations' creation time.
     """
-    params: dict[str, str | int] = {
+    optional = {
+        "groupIDs": None
+        if group_ids is None
+        else ",".join(str(gid) for gid in group_ids),
+        "savedStatus": saved_status,
+        "startDate": start_date,
+        "endDate": end_date,
+        "objID": obj_id,
+        "nameOnly": name_only,
+        "sortByAnnotationOrigin": sort_by_annotation_origin,
+        "sortByAnnotationKey": sort_by_annotation_key,
+        "annotationFilterList": annotation_filter_list,
+        "classifications": None
+        if classifications is None
+        else ",".join(classifications),
+        "minRedshift": min_redshift,
+        "maxRedshift": max_redshift,
+        "queryID": query_id,
+        "photometryAnnotationsFilter": photometry_annotations_filter,
+        "photometryAnnotationsFilterOrigin": photometry_annotations_filter_origin,
+        "photometryAnnotationsFilterBefore": photometry_annotations_filter_before,
+        "photometryAnnotationsFilterAfter": photometry_annotations_filter_after,
+    }
+    params: dict[str, str | int | float | bool] = {
         "pageNumber": page_number,
         "numPerPage": num_per_page,
+        "includePhotometry": include_photometry,
+        **{key: value for key, value in optional.items() if value is not None},
     }
-    if group_ids is not None:
-        params["groupIDs"] = ",".join(str(gid) for gid in group_ids)
-    if saved_status is not None:
-        params["savedStatus"] = saved_status
-    if start_date is not None:
-        params["startDate"] = start_date
-    if end_date is not None:
-        params["endDate"] = end_date
     response = client.get("/api/candidates", params=params)
     return CandidatesPage.model_validate(unwrap(response))
 

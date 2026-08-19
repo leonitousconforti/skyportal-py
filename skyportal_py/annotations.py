@@ -121,6 +121,7 @@ def update_annotation(  # noqa: PLR0913 -- mirrors the endpoint's parameters
     annotation_id: int,
     data: dict[str, Any],
     *,
+    origin: str | None = None,
     resource_type: str = "sources",
     group_ids: list[int] | None = None,
 ) -> None:
@@ -137,6 +138,8 @@ def update_annotation(  # noqa: PLR0913 -- mirrors the endpoint's parameters
         ID of the annotation to update.
     data : dict
         The new annotation payload, a JSON-serializable mapping.
+    origin : str, optional
+        Rename the annotation's origin. If omitted, it is left unchanged.
     resource_type : str, optional
         What the annotation is on: ``"sources"`` (the default),
         ``"spectra"`` or ``"photometry"``.
@@ -145,6 +148,8 @@ def update_annotation(  # noqa: PLR0913 -- mirrors the endpoint's parameters
         the visibility is left unchanged.
     """
     payload: dict[str, Any] = {"data": data}
+    if origin is not None:
+        payload["origin"] = origin
     if group_ids is not None:
         payload["group_ids"] = group_ids
     unwrap(
