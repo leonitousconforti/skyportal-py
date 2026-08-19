@@ -1,0 +1,70 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "mergeConfidence:all-badges",
+        "config:recommended",
+        ":dependencyDashboard",
+        "helpers:pinGitHubActionDigests"
+    ],
+    "labels": ["dependencies", "renovate"],
+    "automerge": true,
+    "automergeType": "branch",
+    "enabledManagers": ["github-actions", "nix", "pep621"],
+    "nix": {
+        "enabled": true
+    },
+    "lockFileMaintenance": {
+        "enabled": true,
+        "schedule": ["before 5am on monday"],
+        "commitMessageAction": "Refresh",
+        "addLabels": ["lockfile-maintenance"],
+        "automerge": true
+    },
+    "packageRules": [
+        {
+            "description": "Group the linting and typing tools into one PR",
+            "matchPackageNames": ["ruff", "ty", "towncrier"],
+            "groupName": "build tools packages",
+            "addLabels": ["pypi"]
+        },
+        {
+            "description": "Group the test tooling into one PR",
+            "matchPackageNames": ["pytest", "/^pytest-/", "respx"],
+            "groupName": "test packages",
+            "addLabels": ["pypi"]
+        },
+        {
+            "description": "Group the packaging backend into one PR",
+            "matchPackageNames": ["setuptools", "setuptools_scm"],
+            "groupName": "packaging packages",
+            "addLabels": ["pypi"]
+        },
+        {
+            "description": "Let PyPI releases soak for a day before proposing them, so yanked or broken uploads never reach a PR",
+            "matchManagers": ["pep621"],
+            "minimumReleaseAge": "1 day"
+        },
+        {
+            "description": "Pin GitHub Actions to a full commit SHA and keep that SHA at the latest release",
+            "matchManagers": ["github-actions"],
+            "pinDigests": true,
+            "addLabels": ["github-actions"]
+        },
+        {
+            "description": "Keep the Nix flake inputs (flake.lock) current",
+            "matchManagers": ["nix"],
+            "addLabels": ["nix"]
+        },
+        {
+            "description": "Never automerge runtime dependency updates, since they ship to users",
+            "matchManagers": ["pep621"],
+            "matchDepTypes": ["project.dependencies", "project.optional-dependencies"],
+            "automerge": false
+        },
+        {
+            "description": "Never automerge ruff, since minor releases can change lint and format behaviour",
+            "matchPackageNames": ["ruff"],
+            "automerge": false
+        }
+    ]
+}

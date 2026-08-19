@@ -1,0 +1,16 @@
+# Don't allow people to merge changes to these generated files, because the result
+# may be invalid. Regenerate them instead (`uv lock`, `nix flake update`).
+uv.lock                      merge=binary
+poetry.lock                  merge=binary
+Pipfile.lock                 merge=binary
+requirements*.txt            merge=binary
+flake.lock                   merge=binary
+
+# Collapse the lockfiles in diffs and exclude them from language statistics,
+# since they are machine-generated and not worth reviewing line by line.
+uv.lock                      linguist-generated=true
+flake.lock                   linguist-generated=true
+
+# CHANGES.md is assembled by towncrier from the fragments in changes.d/, so the
+# release sections below the towncrier marker are generated rather than authored.
+CHANGES.md                   linguist-generated=true
