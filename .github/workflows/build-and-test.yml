@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Renovate uses `automergeType: branch`, pushing straight to renovate/**
+    # without opening a PR, so CI has to run on those branches for Renovate to
+    # have a branch status to gate the automerge on.
+    branches: [main, "renovate/**"]
   pull_request:
     branches: [main]
 
