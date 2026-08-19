@@ -131,7 +131,12 @@ class _SourceSpectra(BaseModel):
     spectra: list[Spectrum] = Field(default_factory=list)
 
 
-def fetch_spectrum(client: httpx.Client, spectrum_id: int) -> Spectrum:
+def fetch_spectrum(
+    client: httpx.Client,
+    spectrum_id: int,
+    *,
+    include_original_file: bool = False,
+) -> Spectrum:
     """Retrieve a single spectrum by ID.
 
     Parameters
@@ -140,12 +145,23 @@ def fetch_spectrum(client: httpx.Client, spectrum_id: int) -> Spectrum:
         Client from :func:`skyportal_py.create_client`.
     spectrum_id : int
         ID of the spectrum.
+    include_original_file : bool, optional
+        Also return the file the spectrum was originally uploaded from, in
+        ``original_file_string``/``original_file_filename``.
     """
-    response = client.get(f"/api/spectrum/{spectrum_id}")
+    response = client.get(
+        f"/api/spectrum/{spectrum_id}",
+        params={"includeOriginalFile": include_original_file},
+    )
     return Spectrum.model_validate(unwrap(response))
 
 
-def fetch_spectra(client: httpx.Client, obj_id: str) -> list[Spectrum]:
+def fetch_spectra(
+    client: httpx.Client,
+    obj_id: str,
+    *,
+    include_original_file: bool = False,
+) -> list[Spectrum]:
     """Retrieve the spectra of a source.
 
     Parameters
@@ -154,8 +170,14 @@ def fetch_spectra(client: httpx.Client, obj_id: str) -> list[Spectrum]:
         Client from :func:`skyportal_py.create_client`.
     obj_id : str
         Object ID of the source, e.g. ``"ZTF20abcdef"``.
+    include_original_file : bool, optional
+        Also return each spectrum's originally uploaded file, in
+        ``original_file_string``/``original_file_filename``.
     """
-    response = client.get(f"/api/sources/{obj_id}/spectra")
+    response = client.get(
+        f"/api/sources/{obj_id}/spectra",
+        params={"includeOriginalFile": include_original_file},
+    )
     return _SourceSpectra.model_validate(unwrap(response)).spectra
 
 

@@ -488,6 +488,7 @@ class SkyPortal(httpx.Client):
     post_source = sources.post_source
     update_source = sources.update_source
     delete_source = sources.delete_source
+    delete_source_photometry = sources.delete_source_photometry
     fetch_source_offsets = sources.fetch_source_offsets
     fetch_source_finder = sources.fetch_source_finder
     fetch_source_finder_json = sources.fetch_source_finder_json

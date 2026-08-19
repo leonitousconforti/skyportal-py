@@ -313,6 +313,7 @@ def fetch_source(
     obj_id: str,
     *,
     include_thumbnails: bool = False,
+    include_photometry: bool = False,
 ) -> Source:
     """Retrieve a single source by object ID.
 
@@ -324,10 +325,15 @@ def fetch_source(
         Object ID of the source, e.g. ``"ZTF20abcdef"``.
     include_thumbnails : bool, optional
         Include thumbnail data in the response.
+    include_photometry : bool, optional
+        Include the source's photometry in ``photometry``.
     """
     response = client.get(
         f"/api/sources/{obj_id}",
-        params={"includeThumbnails": include_thumbnails},
+        params={
+            "includeThumbnails": include_thumbnails,
+            "includePhotometry": include_photometry,
+        },
     )
     return Source.model_validate(unwrap(response))
 
@@ -620,6 +626,21 @@ def delete_source(client: httpx.Client, obj_id: str, group_id: int) -> None:
             json={"group_id": group_id},
         )
     )
+
+
+def delete_source_photometry(client: httpx.Client, obj_id: str) -> str:
+    """Delete all of a source's photometry points.
+
+    Requires the "Delete bulk photometry" permission.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    obj_id : str
+        Object ID of the source whose photometry is deleted.
+    """
+    return str(unwrap(client.delete(f"/api/sources/{obj_id}/photometry")))
 
 
 def fetch_source_offsets(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
