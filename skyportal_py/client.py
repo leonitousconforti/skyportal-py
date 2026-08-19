@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 
 from skyportal_py import (
@@ -58,6 +60,7 @@ from skyportal_py import (
     teams,
     telescopes,
     thumbnails,
+    tokens,
     users,
     weather,
 )
@@ -139,6 +142,7 @@ class SkyPortal(httpx.Client):
     post_broker_filter_module = brokers.post_broker_filter_module
     update_broker_filter_module = brokers.update_broker_filter_module
     fetch_candidate = candidates.fetch_candidate
+    candidate_exists = candidates.candidate_exists
     fetch_candidates = candidates.fetch_candidates
     post_candidate = candidates.post_candidate
     delete_candidate = candidates.delete_candidate
@@ -153,6 +157,7 @@ class SkyPortal(httpx.Client):
     post_gaia_alerts_query = catalog_queries.post_gaia_alerts_query
     fetch_classifications = classifications.fetch_classifications
     post_classification = classifications.post_classification
+    post_classifications = classifications.post_classifications
     delete_classification = classifications.delete_classification
     fetch_classification = classifications.fetch_classification
     fetch_classifications_query = classifications.fetch_classifications_query
@@ -275,6 +280,7 @@ class SkyPortal(httpx.Client):
         group_admission_requests.delete_group_admission_request
     )
     fetch_groups = groups.fetch_groups
+    fetch_groups_by_name = groups.fetch_groups_by_name
     fetch_group = groups.fetch_group
     post_group = groups.post_group
     update_group = groups.update_group
@@ -424,6 +430,7 @@ class SkyPortal(httpx.Client):
     update_photometry_validation = photometry.update_photometry_validation
     delete_photometry_validation = photometry.delete_photometry_validation
     fetch_profile = profile.fetch_profile
+    update_profile = profile.update_profile
     fetch_public_source_pages = public_pages.fetch_public_source_pages
     post_public_source_page = public_pages.post_public_source_page
     delete_public_source_page = public_pages.delete_public_source_page
@@ -479,10 +486,13 @@ class SkyPortal(httpx.Client):
     post_source_groups = source_groups.post_source_groups
     update_source_group = source_groups.update_source_group
     fetch_source = sources.fetch_source
+    source_exists = sources.source_exists
     fetch_sources = sources.fetch_sources
+    fetch_sources_save_summary = sources.fetch_sources_save_summary
     post_source = sources.post_source
     update_source = sources.update_source
     delete_source = sources.delete_source
+    delete_source_photometry = sources.delete_source_photometry
     fetch_source_offsets = sources.fetch_source_offsets
     fetch_source_finder = sources.fetch_source_finder
     fetch_source_finder_json = sources.fetch_source_finder_json
@@ -556,6 +566,9 @@ class SkyPortal(httpx.Client):
     fetch_config = system.fetch_config
     fetch_db_stats = system.fetch_db_stats
     fetch_enum_types = system.fetch_enum_types
+    fetch_dbinfo = system.fetch_dbinfo
+    fetch_altdata_info = system.fetch_altdata_info
+    fetch_annotations_info = system.fetch_annotations_info
     fetch_obj_tag_options = tags.fetch_obj_tag_options
     post_obj_tag_option = tags.post_obj_tag_option
     update_obj_tag_option = tags.update_obj_tag_option
@@ -585,6 +598,11 @@ class SkyPortal(httpx.Client):
     fetch_thumbnail_paths = thumbnails.fetch_thumbnail_paths
     update_thumbnail_paths = thumbnails.update_thumbnail_paths
     delete_thumbnail_folders = thumbnails.delete_thumbnail_folders
+    fetch_tokens = tokens.fetch_tokens
+    fetch_token = tokens.fetch_token
+    post_token = tokens.post_token
+    update_token = tokens.update_token
+    delete_token = tokens.delete_token
     fetch_users = users.fetch_users
     fetch_user = users.fetch_user
     post_user = users.post_user
@@ -597,7 +615,8 @@ def create_client(
     base_url: str,
     token: str | None = None,
     *,
-    timeout: float = 30.0,
+    timeout: float | None = 30.0,
+    **httpx_kwargs: Any,  # noqa: ANN401 -- forwarded verbatim to httpx.Client
 ) -> SkyPortal:
     """Create a client configured for a SkyPortal instance.
 
@@ -611,8 +630,13 @@ def create_client(
     token : str, optional
         API token from your SkyPortal profile page. Omit for anonymous
         access to instances that allow it.
-    timeout : float, optional
-        Timeout in seconds applied to every request.
+    timeout : float or None, optional
+        Timeout in seconds applied to every request; None disables it.
+    **httpx_kwargs
+        Remaining ``httpx.Client`` options, e.g. ``trust_env=False`` to keep
+        a netrc entry from overriding the token header.
     """
     headers = {} if token is None else {"Authorization": f"token {token}"}
-    return SkyPortal(base_url=base_url, headers=headers, timeout=timeout)
+    return SkyPortal(
+        base_url=base_url, headers=headers, timeout=timeout, **httpx_kwargs
+    )

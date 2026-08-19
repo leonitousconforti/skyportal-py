@@ -52,42 +52,56 @@ class AnnotationPostResponse(BaseModel):
     annotation_id: int
 
 
-def fetch_annotations(client: httpx.Client, obj_id: str) -> list[Annotation]:
-    """Retrieve the annotations on a source.
+def fetch_annotations(
+    client: httpx.Client,
+    resource_id: str | int,
+    *,
+    resource_type: str = "sources",
+) -> list[Annotation]:
+    """Retrieve the annotations on an annotatable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the source, e.g. ``"ZTF20abcdef"``.
+    resource_id : str or int
+        ID of the annotated resource: an object ID for sources, otherwise
+        an integer ID.
+    resource_type : str, optional
+        What the annotations are on: ``"sources"`` (the default),
+        ``"spectra"`` or ``"photometry"``.
     """
-    response = client.get(f"/api/sources/{obj_id}/annotations")
+    response = client.get(f"/api/{resource_type}/{resource_id}/annotations")
     return [Annotation.model_validate(item) for item in unwrap(response)]
 
 
-def post_annotation(
+def post_annotation(  # noqa: PLR0913 -- mirrors the endpoint's parameters
     client: httpx.Client,
-    obj_id: str,
+    resource_id: str | int,
     origin: str,
     data: dict[str, Any],
     *,
+    resource_type: str = "sources",
     group_ids: list[int] | None = None,
 ) -> AnnotationPostResponse:
-    """Post an annotation on a source.
+    """Post an annotation on an annotatable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the source to annotate.
+    resource_id : str or int
+        ID of the resource to annotate: an object ID for sources,
+        otherwise an integer ID.
     origin : str
         Name of the process that produced the annotation, e.g. a pipeline
         or cross-match service. A source can hold one annotation per
         origin.
     data : dict
         The annotation payload, a JSON-serializable mapping.
+    resource_type : str, optional
+        What to annotate: ``"sources"`` (the default), ``"spectra"`` or
+        ``"photometry"``.
     group_ids : list of int, optional
         Restrict the annotation's visibility to these groups. If omitted,
         the server applies its default visibility.
@@ -95,55 +109,82 @@ def post_annotation(
     payload: dict[str, Any] = {"origin": origin, "data": data}
     if group_ids is not None:
         payload["group_ids"] = group_ids
-    response = client.post(f"/api/sources/{obj_id}/annotations", json=payload)
+    response = client.post(
+        f"/api/{resource_type}/{resource_id}/annotations", json=payload
+    )
     return AnnotationPostResponse.model_validate(unwrap(response))
 
 
-def update_annotation(
+def update_annotation(  # noqa: PLR0913 -- mirrors the endpoint's parameters
     client: httpx.Client,
-    obj_id: str,
+    resource_id: str | int,
     annotation_id: int,
     data: dict[str, Any],
     *,
+    origin: str | None = None,
+    resource_type: str = "sources",
     group_ids: list[int] | None = None,
 ) -> None:
-    """Update an annotation on a source.
+    """Update an annotation on an annotatable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the annotated source.
+    resource_id : str or int
+        ID of the annotated resource: an object ID for sources, otherwise
+        an integer ID.
     annotation_id : int
         ID of the annotation to update.
     data : dict
         The new annotation payload, a JSON-serializable mapping.
+    origin : str, optional
+        Rename the annotation's origin. If omitted, it is left unchanged.
+    resource_type : str, optional
+        What the annotation is on: ``"sources"`` (the default),
+        ``"spectra"`` or ``"photometry"``.
     group_ids : list of int, optional
         Restrict the annotation's visibility to these groups. If omitted,
         the visibility is left unchanged.
     """
     payload: dict[str, Any] = {"data": data}
+    if origin is not None:
+        payload["origin"] = origin
     if group_ids is not None:
         payload["group_ids"] = group_ids
     unwrap(
-        client.put(f"/api/sources/{obj_id}/annotations/{annotation_id}", json=payload)
+        client.put(
+            f"/api/{resource_type}/{resource_id}/annotations/{annotation_id}",
+            json=payload,
+        )
     )
 
 
-def delete_annotation(client: httpx.Client, obj_id: str, annotation_id: int) -> None:
-    """Delete an annotation on a source.
+def delete_annotation(
+    client: httpx.Client,
+    resource_id: str | int,
+    annotation_id: int,
+    *,
+    resource_type: str = "sources",
+) -> None:
+    """Delete an annotation on an annotatable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the annotated source.
+    resource_id : str or int
+        ID of the annotated resource: an object ID for sources, otherwise
+        an integer ID.
     annotation_id : int
         ID of the annotation to delete.
+    resource_type : str, optional
+        What the annotation is on: ``"sources"`` (the default),
+        ``"spectra"`` or ``"photometry"``.
     """
-    unwrap(client.delete(f"/api/sources/{obj_id}/annotations/{annotation_id}"))
+    unwrap(
+        client.delete(f"/api/{resource_type}/{resource_id}/annotations/{annotation_id}")
+    )
 
 
 class AnnotationDetail(Annotation):

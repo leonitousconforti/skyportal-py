@@ -633,7 +633,12 @@ def post_analysis_upload(
     return AnalysisUploadResponse.model_validate(unwrap(response))
 
 
-def fetch_analysis_results(client: httpx.Client, analysis_id: int) -> Any:  # noqa: ANN401
+def fetch_analysis_results(
+    client: httpx.Client,
+    analysis_id: int,
+    *,
+    download: bool = False,
+) -> Any:  # noqa: ANN401
     """Retrieve the results data of a completed analysis.
 
     Parameters
@@ -642,8 +647,16 @@ def fetch_analysis_results(client: httpx.Client, analysis_id: int) -> Any:  # no
         Client from :func:`skyportal_py.create_client`.
     analysis_id : int
         ID of the analysis.
+    download : bool, optional
+        Retrieve the results as a JSON file download instead of the usual
+        response envelope; the return value is then the raw file bytes.
     """
-    response = client.get(f"/api/obj/analysis/{analysis_id}/results")
+    response = client.get(
+        f"/api/obj/analysis/{analysis_id}/results",
+        params={"download": "true"} if download else {},
+    )
+    if download:
+        return unwrap_content(response)
     return unwrap(response)
 
 

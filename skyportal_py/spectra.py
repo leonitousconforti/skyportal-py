@@ -131,7 +131,12 @@ class _SourceSpectra(BaseModel):
     spectra: list[Spectrum] = Field(default_factory=list)
 
 
-def fetch_spectrum(client: httpx.Client, spectrum_id: int) -> Spectrum:
+def fetch_spectrum(
+    client: httpx.Client,
+    spectrum_id: int,
+    *,
+    include_original_file: bool = False,
+) -> Spectrum:
     """Retrieve a single spectrum by ID.
 
     Parameters
@@ -140,12 +145,26 @@ def fetch_spectrum(client: httpx.Client, spectrum_id: int) -> Spectrum:
         Client from :func:`skyportal_py.create_client`.
     spectrum_id : int
         ID of the spectrum.
+    include_original_file : bool, optional
+        Also return the file the spectrum was originally uploaded from, in
+        ``original_file_string``/``original_file_filename``.
     """
-    response = client.get(f"/api/spectrum/{spectrum_id}")
+    response = client.get(
+        f"/api/spectrum/{spectrum_id}",
+        params={"includeOriginalFile": include_original_file},
+    )
     return Spectrum.model_validate(unwrap(response))
 
 
-def fetch_spectra(client: httpx.Client, obj_id: str) -> list[Spectrum]:
+def fetch_spectra(  # noqa: PLR0913 -- mirrors the query parameters
+    client: httpx.Client,
+    obj_id: str,
+    *,
+    include_original_file: bool = False,
+    normalization: str | None = None,
+    sort_by: str = "observed_at",
+    sort_order: str = "asc",
+) -> list[Spectrum]:
     """Retrieve the spectra of a source.
 
     Parameters
@@ -154,8 +173,27 @@ def fetch_spectra(client: httpx.Client, obj_id: str) -> list[Spectrum]:
         Client from :func:`skyportal_py.create_client`.
     obj_id : str
         Object ID of the source, e.g. ``"ZTF20abcdef"``.
+    include_original_file : bool, optional
+        Also return each spectrum's originally uploaded file, in
+        ``original_file_string``/``original_file_filename``.
+    normalization : str, optional
+        Normalize each spectrum's fluxes before returning; the only
+        supported scheme is ``"median"`` (median absolute flux becomes 1).
+        Omitted returns the original fluxes.
+    sort_by : str, optional
+        Column to order the spectra by, ``"observed_at"`` or
+        ``"created_at"``.
+    sort_order : str, optional
+        Sort direction, ``"asc"`` or ``"desc"``.
     """
-    response = client.get(f"/api/sources/{obj_id}/spectra")
+    params: dict[str, str | bool] = {
+        "includeOriginalFile": include_original_file,
+        "sortBy": sort_by,
+        "sortOrder": sort_order,
+    }
+    if normalization is not None:
+        params["normalization"] = normalization
+    response = client.get(f"/api/sources/{obj_id}/spectra", params=params)
     return _SourceSpectra.model_validate(unwrap(response)).spectra
 
 

@@ -61,37 +61,73 @@ class CommentPostResponse(BaseModel):
     message: str | None = None
 
 
-def fetch_comments(client: httpx.Client, obj_id: str) -> list[Comment]:
-    """Retrieve the comments on a source.
+def fetch_comments(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
+    client: httpx.Client,
+    resource_id: str | int,
+    *,
+    resource_type: str = "sources",
+    text: str | None = None,
+    channel: str | None = None,
+    page_number: int = 1,
+    num_per_page: int = 25,
+) -> list[Comment]:
+    """Retrieve the comments on a commentable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the source, e.g. ``"ZTF20abcdef"``.
+    resource_id : str or int
+        ID of the commented resource: an object ID for sources, otherwise
+        an integer ID.
+    resource_type : str, optional
+        What the comments are on: ``"sources"`` (the default),
+        ``"spectra"``, ``"gcn_event"``, ``"shift"`` or ``"earthquake"``.
+    text : str, optional
+        Restrict to comments whose text contains this string; matching
+        comments come back newest first.
+    channel : str, optional
+        Restrict to source comments on this channel. Only applies when
+        ``resource_type`` is ``"sources"``; without it the server returns
+        only channel-less comments.
+    page_number, num_per_page : int, optional
+        Pagination controls; the server caps the page size and only
+        paginates when ``text`` is provided.
     """
-    response = client.get(f"/api/sources/{obj_id}/comments")
+    params: dict[str, str | int] = {
+        "pageNumber": page_number,
+        "numPerPage": num_per_page,
+    }
+    if text is not None:
+        params["text"] = text
+    if channel is not None:
+        params["channel"] = channel
+    response = client.get(f"/api/{resource_type}/{resource_id}/comments", params=params)
     return [Comment.model_validate(comment) for comment in unwrap(response)]
 
 
 def post_comment(
     client: httpx.Client,
-    obj_id: str,
+    resource_id: str | int,
     text: str,
     *,
+    resource_type: str = "sources",
     group_ids: list[int] | None = None,
 ) -> CommentPostResponse:
-    """Post a comment on a source.
+    """Post a comment on a commentable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the source to comment on.
+    resource_id : str or int
+        ID of the resource to comment on: an object ID for sources,
+        otherwise an integer ID.
     text : str
         The comment text.
+    resource_type : str, optional
+        What to comment on: ``"sources"`` (the default), ``"spectra"``,
+        ``"gcn_event"``, ``"shift"`` or ``"earthquake"``.
     group_ids : list of int, optional
         Restrict the comment's visibility to these groups. If omitted, the
         server applies its default visibility.
@@ -99,53 +135,86 @@ def post_comment(
     payload: dict[str, str | list[int]] = {"text": text}
     if group_ids is not None:
         payload["group_ids"] = group_ids
-    response = client.post(f"/api/sources/{obj_id}/comments", json=payload)
+    response = client.post(f"/api/{resource_type}/{resource_id}/comments", json=payload)
     return CommentPostResponse.model_validate(unwrap(response))
 
 
-def update_comment(
+def update_comment(  # noqa: PLR0913 -- mirrors the request body
     client: httpx.Client,
-    obj_id: str,
+    resource_id: str | int,
     comment_id: int,
-    text: str,
+    text: str | None = None,
     *,
+    resource_type: str = "sources",
+    attachment_name: str | None = None,
+    attachment_body: str | None = None,
     group_ids: list[int] | None = None,
 ) -> None:
-    """Update a comment on a source.
+    """Update a comment on a commentable resource.
+
+    Omitted fields are left unchanged; provide at least one. To replace the
+    attachment, give ``attachment_name`` and ``attachment_body`` together.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the commented source.
+    resource_id : str or int
+        ID of the commented resource: an object ID for sources, otherwise
+        an integer ID.
     comment_id : int
         ID of the comment to update.
-    text : str
+    text : str, optional
         The new comment text.
+    resource_type : str, optional
+        What the comment is on: ``"sources"`` (the default), ``"spectra"``,
+        ``"gcn_event"``, ``"shift"`` or ``"earthquake"``.
+    attachment_name : str, optional
+        Filename of the replacement attachment.
+    attachment_body : str, optional
+        Base64-encoded contents of the replacement attachment, optionally
+        still carrying a ``data:...;base64,`` prefix.
     group_ids : list of int, optional
         Restrict the comment's visibility to these groups. If omitted, the
         visibility is left unchanged.
     """
-    payload: dict[str, str | list[int]] = {"text": text}
+    payload: dict[str, Any] = {}
+    if text is not None:
+        payload["text"] = text
+    if attachment_name is not None or attachment_body is not None:
+        payload["attachment"] = {"name": attachment_name, "body": attachment_body}
     if group_ids is not None:
         payload["group_ids"] = group_ids
-    unwrap(client.put(f"/api/sources/{obj_id}/comments/{comment_id}", json=payload))
+    unwrap(
+        client.put(
+            f"/api/{resource_type}/{resource_id}/comments/{comment_id}", json=payload
+        )
+    )
 
 
-def delete_comment(client: httpx.Client, obj_id: str, comment_id: int) -> None:
-    """Delete a comment on a source.
+def delete_comment(
+    client: httpx.Client,
+    resource_id: str | int,
+    comment_id: int,
+    *,
+    resource_type: str = "sources",
+) -> None:
+    """Delete a comment on a commentable resource.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
-    obj_id : str
-        Object ID of the commented source.
+    resource_id : str or int
+        ID of the commented resource: an object ID for sources, otherwise
+        an integer ID.
     comment_id : int
         ID of the comment to delete.
+    resource_type : str, optional
+        What the comment is on: ``"sources"`` (the default), ``"spectra"``,
+        ``"gcn_event"``, ``"shift"`` or ``"earthquake"``.
     """
-    unwrap(client.delete(f"/api/sources/{obj_id}/comments/{comment_id}"))
+    unwrap(client.delete(f"/api/{resource_type}/{resource_id}/comments/{comment_id}"))
 
 
 class CommentDetail(Comment):

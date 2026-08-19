@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -102,43 +102,44 @@ class PhotometryPoint(_SerializedPhotometry):
 
 
 class PhotometryPost(BaseModel):
-    """Payload for posting a photometry point.
+    """Payload for posting one or many photometry points.
 
     Provide either ``mag``/``magerr`` (magnitude space) or
     ``flux``/``fluxerr``/``zp`` (flux space). For non-detections, leave the
-    measurement fields unset and provide ``limiting_mag``. The endpoint also
-    accepts a list for every measurement field to upload many points at
-    once, which this model does not express.
+    measurement fields unset and provide ``limiting_mag``. Every measurement
+    field also accepts a 1D list to upload many points at once; scalars are
+    broadcast across the lists, and a None entry inside a ``mag``/``flux``
+    list marks that point as a non-detection.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    obj_id: str
-    mjd: float
-    instrument_id: int
-    filter: str
-    magsys: str = "ab"
-    mag: float | None = None
-    magerr: float | None = None
-    limiting_mag: float | None = None
-    limiting_mag_nsigma: float | None = None
-    magref: float | None = None
-    e_magref: float | None = None
-    flux: float | None = None
-    fluxerr: float | None = None
-    zp: float | None = None
-    ref_flux: float | None = None
-    ref_fluxerr: float | None = None
-    ref_zp: float | None = None
-    ra: float | None = None
-    dec: float | None = None
-    ra_unc: float | None = None
-    dec_unc: float | None = None
-    origin: str | None = None
+    obj_id: str | list[str]
+    mjd: float | list[float]
+    instrument_id: int | list[int]
+    filter: str | list[str]
+    magsys: str | list[str] = "ab"
+    mag: float | list[float | None] | None = None
+    magerr: float | list[float | None] | None = None
+    limiting_mag: float | list[float | None] | None = None
+    limiting_mag_nsigma: float | list[float | None] | None = None
+    magref: float | list[float | None] | None = None
+    e_magref: float | list[float | None] | None = None
+    flux: float | list[float | None] | None = None
+    fluxerr: float | list[float | None] | None = None
+    zp: float | list[float | None] | None = None
+    ref_flux: float | list[float | None] | None = None
+    ref_fluxerr: float | list[float | None] | None = None
+    ref_zp: float | list[float | None] | None = None
+    ra: float | list[float | None] | None = None
+    dec: float | list[float | None] | None = None
+    ra_unc: float | list[float | None] | None = None
+    dec_unc: float | list[float | None] | None = None
+    origin: str | list[str | None] | None = None
     assignment_id: int | None = None
-    altdata: dict[str, Any] | None = None
+    altdata: dict[str, Any] | list[dict[str, Any] | None] | None = None
     extinction_corrected: bool | None = None
-    group_ids: list[int] | None = None
+    group_ids: list[int] | Literal["all"] | None = None
     stream_ids: list[int] | None = None
 
 
@@ -151,12 +152,21 @@ class PhotometryPostResponse(BaseModel):
     upload_id: str | None = None
 
 
-def fetch_photometry(
+def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     client: httpx.Client,
     obj_id: str,
     *,
     format: str = "mag",  # noqa: A002 -- mirrors the endpoint's query parameter
     magsys: str = "ab",
+    include_extinction: bool = False,
+    include_validation_info: bool = False,
+    include_annotation_info: bool = False,
+    include_owner_info: bool = False,
+    include_stream_info: bool = False,
+    include_super_objs_photometry: bool = False,
+    deduplicate_photometry: bool = False,
+    individual_or_series: str = "both",
+    phase_fold_data: bool = False,
 ) -> list[PhotometryPoint]:
     """Retrieve the photometry of a source.
 
@@ -170,6 +180,30 @@ def fetch_photometry(
         Return photometry in ``"mag"`` or ``"flux"`` space.
     magsys : str, optional
         Magnitude system, ``"ab"`` or ``"vega"``.
+    include_extinction : bool, optional
+        Also return the Galactic extinction at each point and the corrected
+        measurement, in ``extinction`` and ``mag_corr``/``flux_corr``.
+    include_validation_info : bool, optional
+        Also return each point's validation records in ``validations``.
+    include_annotation_info : bool, optional
+        Also return each point's annotations in ``annotations``.
+    include_owner_info : bool, optional
+        Also return the point's uploading user in ``owner``.
+    include_stream_info : bool, optional
+        Also return the streams each point belongs to in ``streams``.
+    include_super_objs_photometry : bool, optional
+        Aggregate photometry from every object linked through the source's
+        SuperObj.
+    deduplicate_photometry : bool, optional
+        Drop duplicate ``(mjd, filter)`` points, keeping the most recently
+        created one.
+    individual_or_series : str, optional
+        Return ``"individual"`` points, photometric ``"series"`` rows, or
+        ``"both"``.
+    phase_fold_data : bool, optional
+        Phase-fold the photometry on the object's most recent ``period``
+        annotation, in ``phase``. The server errors if the object has no
+        period annotation.
 
     Notes
     -----
@@ -178,7 +212,19 @@ def fetch_photometry(
     """
     response = client.get(
         f"/api/sources/{obj_id}/photometry",
-        params={"format": format, "magsys": magsys},
+        params={
+            "format": format,
+            "magsys": magsys,
+            "includeExtinction": include_extinction,
+            "includeValidationInfo": include_validation_info,
+            "includeAnnotationInfo": include_annotation_info,
+            "includeOwnerInfo": include_owner_info,
+            "includeStreamInfo": include_stream_info,
+            "includeSuperObjsPhotometry": include_super_objs_photometry,
+            "deduplicatePhotometry": deduplicate_photometry,
+            "individualOrSeries": individual_or_series,
+            "phaseFoldData": phase_fold_data,
+        },
     )
     return [PhotometryPoint.model_validate(point) for point in unwrap(response)]
 
@@ -296,7 +342,10 @@ class PhotometryUpdate(BaseModel):
     Every field is optional: the server loads the point, applies the given
     fields, and re-validates the result as either a flux-space
     (``flux``/``fluxerr``/``zp``) or magnitude-space (``mag``/``magerr``)
-    measurement.
+    measurement. Only the fields explicitly set on the payload are sent, so
+    passing ``None`` explicitly (e.g. ``mag=None, magerr=None`` to turn a
+    detection into a non-detection) sends a null, while omitting a field
+    leaves it unchanged.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -375,7 +424,7 @@ def update_photometry(
         client.patch(
             f"/api/photometry/{photometry_id}",
             params=params,
-            json=payload.model_dump(exclude_none=True),
+            json=payload.model_dump(exclude_unset=True),
         )
     )
 

@@ -146,6 +146,8 @@ class FollowupRequestPostResponse(BaseModel):
 def fetch_followup_request(
     client: httpx.Client,
     followup_request_id: int,
+    *,
+    include_obj_thumbnails: bool = True,
 ) -> FollowupRequest:
     """Retrieve a single follow-up request by ID.
 
@@ -155,8 +157,14 @@ def fetch_followup_request(
         Client from :func:`skyportal_py.create_client`.
     followup_request_id : int
         ID of the follow-up request.
+    include_obj_thumbnails : bool, optional
+        Load the target object's thumbnails with the request. On by
+        default; pass False to skip them.
     """
-    response = client.get(f"/api/followup_request/{followup_request_id}")
+    response = client.get(
+        f"/api/followup_request/{followup_request_id}",
+        params={"includeObjThumbnails": include_obj_thumbnails},
+    )
     return FollowupRequest.model_validate(unwrap(response))
 
 
@@ -171,6 +179,12 @@ def fetch_followup_requests(  # noqa: PLR0913 -- mirrors the endpoint's query pa
     status: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    observation_start_date: str | None = None,
+    observation_end_date: str | None = None,
+    priority_threshold: float | None = None,
+    requesters: list[int] | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "asc",
 ) -> FollowupRequestsPage:
     """Query follow-up requests, one page at a time.
 
@@ -192,10 +206,24 @@ def fetch_followup_requests(  # noqa: PLR0913 -- mirrors the endpoint's query pa
     start_date, end_date : str, optional
         Restrict to requests created in this date range, as ISO-format
         date strings, e.g. ``"2020-01-01"``.
+    observation_start_date, observation_end_date : str, optional
+        Restrict to requests whose payload observation window falls in
+        this date range, as ISO-format date strings.
+    priority_threshold : float, optional
+        Restrict to requests with payload priority at or above this value.
+    requesters : list of int, optional
+        Restrict to requests made by these user IDs.
+    sort_by : str, optional
+        Field to sort by; one of ``"created_at"``, ``"modified"``,
+        ``"status"`` or ``"obj"``.
+    sort_order : str, optional
+        ``"asc"`` or ``"desc"``.
     """
-    params: dict[str, str | int] = {
+    params: dict[str, str | int | float] = {
         "pageNumber": page_number,
         "numPerPage": num_per_page,
+        "sortBy": sort_by,
+        "sortOrder": sort_order,
     }
     if source_id is not None:
         params["sourceID"] = source_id
@@ -209,6 +237,14 @@ def fetch_followup_requests(  # noqa: PLR0913 -- mirrors the endpoint's query pa
         params["startDate"] = start_date
     if end_date is not None:
         params["endDate"] = end_date
+    if observation_start_date is not None:
+        params["observationStartDate"] = observation_start_date
+    if observation_end_date is not None:
+        params["observationEndDate"] = observation_end_date
+    if priority_threshold is not None:
+        params["priorityThreshold"] = priority_threshold
+    if requesters is not None:
+        params["requesters"] = ",".join(str(user_id) for user_id in requesters)
     response = client.get("/api/followup_request", params=params)
     return FollowupRequestsPage.model_validate(unwrap(response))
 
@@ -635,6 +671,9 @@ def delete_default_followup_request(
 def request_followup_photometry(
     client: httpx.Client,
     followup_request_id: int,
+    *,
+    refresh_source: bool = True,
+    refresh_requests: bool = False,
 ) -> PhotometryRequestStatus:
     """Retrieve photometry for a follow-up request from its facility.
 
@@ -647,8 +686,19 @@ def request_followup_photometry(
         Client from :func:`skyportal_py.create_client`.
     followup_request_id : int
         ID of the follow-up request.
+    refresh_source : bool, optional
+        Have the facility API push a source refresh to the frontend after
+        retrieval. On by default.
+    refresh_requests : bool, optional
+        Also push a refresh of the source's follow-up requests.
     """
-    response = client.get(f"/api/photometry_request/{followup_request_id}")
+    response = client.get(
+        f"/api/photometry_request/{followup_request_id}",
+        params={
+            "refreshSource": refresh_source,
+            "refreshRequests": refresh_requests,
+        },
+    )
     return PhotometryRequestStatus.model_validate(unwrap(response))
 
 

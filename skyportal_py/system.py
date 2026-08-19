@@ -48,6 +48,55 @@ def fetch_sysinfo(client: httpx.Client) -> SysInfo:
     return SysInfo.model_validate(unwrap(response))
 
 
+class DBInfo(BaseModel):
+    """Basic health information about the instance's database."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_table_empty: bool | None = None
+    postgres_version: str | None = None
+
+
+def fetch_dbinfo(client: httpx.Client) -> DBInfo:
+    """Retrieve whether the sources table is empty and the Postgres version.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    """
+    response = client.get("/api/internal/dbinfo")
+    return DBInfo.model_validate(unwrap(response))
+
+
+def fetch_altdata_info(client: httpx.Client) -> Any:  # noqa: ANN401 -- shape depends on query
+    """Retrieve the catalog of altdata keys carried by accessible sources.
+
+    The response shape varies with the endpoint's query arguments, so it is
+    returned unmodelled.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    """
+    return unwrap(client.get("/api/internal/altdata_info"))
+
+
+def fetch_annotations_info(client: httpx.Client) -> Any:  # noqa: ANN401 -- shape depends on query
+    """Retrieve the catalog of annotation origins and keys.
+
+    The response shape varies with the endpoint's query arguments, so it is
+    returned unmodelled.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client from :func:`skyportal_py.create_client`.
+    """
+    return unwrap(client.get("/api/internal/annotations_info"))
+
+
 def fetch_config(client: httpx.Client) -> dict[str, Any]:
     """Retrieve the parts of the instance config exposed to clients.
 
