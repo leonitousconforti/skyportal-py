@@ -321,6 +321,8 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     include_labellers: bool = False,
     include_gcn_crossmatches: bool = False,
     include_analyses: bool = False,
+    include_comments: bool = False,
+    include_super_objs: bool = False,
     deduplicate_photometry: bool = False,
 ) -> Source:
     """Retrieve a single source by object ID.
@@ -350,6 +352,11 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Include the source's GCN event crossmatches, in ``gcn_crossmatch``.
     include_analyses : bool, optional
         Include the source's analyses in ``analyses``.
+    include_comments : bool, optional
+        Include the source's comments in ``comments``.
+    include_super_objs : bool, optional
+        Aggregate data from every object linked through the source's
+        SuperObj (see ``associated_objs``).
     deduplicate_photometry : bool, optional
         With ``include_photometry``, drop photometry points duplicated
         within a short time window.
@@ -366,6 +373,8 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
             "includeLabellers": include_labellers,
             "includeGCNCrossmatches": include_gcn_crossmatches,
             "includeAnalyses": include_analyses,
+            "includeComments": include_comments,
+            "includeSuperObjs": include_super_objs,
             "deduplicatePhotometry": deduplicate_photometry,
         },
     )

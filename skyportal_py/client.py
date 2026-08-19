@@ -567,6 +567,8 @@ class SkyPortal(httpx.Client):
     fetch_db_stats = system.fetch_db_stats
     fetch_enum_types = system.fetch_enum_types
     fetch_dbinfo = system.fetch_dbinfo
+    fetch_altdata_info = system.fetch_altdata_info
+    fetch_annotations_info = system.fetch_annotations_info
     fetch_obj_tag_options = tags.fetch_obj_tag_options
     post_obj_tag_option = tags.post_obj_tag_option
     update_obj_tag_option = tags.update_obj_tag_option

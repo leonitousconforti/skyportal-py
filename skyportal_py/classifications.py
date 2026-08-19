@@ -102,7 +102,12 @@ class ClassificationsPostResponse(BaseModel):
     classification_ids: list[int] = Field(default_factory=list)
 
 
-def fetch_classifications(client: httpx.Client, obj_id: str) -> list[Classification]:
+def fetch_classifications(
+    client: httpx.Client,
+    obj_id: str,
+    *,
+    include_super_objs: bool = False,
+) -> list[Classification]:
     """Retrieve the classifications of a source.
 
     Parameters
@@ -111,8 +116,14 @@ def fetch_classifications(client: httpx.Client, obj_id: str) -> list[Classificat
         Client from :func:`skyportal_py.create_client`.
     obj_id : str
         Object ID of the source, e.g. ``"ZTF20abcdef"``.
+    include_super_objs : bool, optional
+        Aggregate classifications from every object linked through the
+        source's SuperObj.
     """
-    response = client.get(f"/api/sources/{obj_id}/classifications")
+    response = client.get(
+        f"/api/sources/{obj_id}/classifications",
+        params={"includeSuperObjs": include_super_objs},
+    )
     return [Classification.model_validate(item) for item in unwrap(response)]
 
 

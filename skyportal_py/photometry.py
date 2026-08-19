@@ -160,6 +160,7 @@ def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     magsys: str = "ab",
     include_extinction: bool = False,
     include_validation_info: bool = False,
+    include_super_objs_photometry: bool = False,
 ) -> list[PhotometryPoint]:
     """Retrieve the photometry of a source.
 
@@ -178,6 +179,9 @@ def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
         measurement, in ``extinction`` and ``mag_corr``/``flux_corr``.
     include_validation_info : bool, optional
         Also return each point's validation records in ``validations``.
+    include_super_objs_photometry : bool, optional
+        Aggregate photometry from every object linked through the source's
+        SuperObj.
 
     Notes
     -----
@@ -191,6 +195,7 @@ def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
             "magsys": magsys,
             "includeExtinction": include_extinction,
             "includeValidationInfo": include_validation_info,
+            "includeSuperObjsPhotometry": include_super_objs_photometry,
         },
     )
     return [PhotometryPoint.model_validate(point) for point in unwrap(response)]
