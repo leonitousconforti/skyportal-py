@@ -61,11 +61,15 @@ class CommentPostResponse(BaseModel):
     message: str | None = None
 
 
-def fetch_comments(
+def fetch_comments(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     client: httpx.Client,
     resource_id: str | int,
     *,
     resource_type: str = "sources",
+    text: str | None = None,
+    channel: str | None = None,
+    page_number: int = 1,
+    num_per_page: int = 25,
 ) -> list[Comment]:
     """Retrieve the comments on a commentable resource.
 
@@ -79,8 +83,26 @@ def fetch_comments(
     resource_type : str, optional
         What the comments are on: ``"sources"`` (the default),
         ``"spectra"``, ``"gcn_event"``, ``"shift"`` or ``"earthquake"``.
+    text : str, optional
+        Restrict to comments whose text contains this string; matching
+        comments come back newest first.
+    channel : str, optional
+        Restrict to source comments on this channel. Only applies when
+        ``resource_type`` is ``"sources"``; without it the server returns
+        only channel-less comments.
+    page_number, num_per_page : int, optional
+        Pagination controls; the server caps the page size and only
+        paginates when ``text`` is provided.
     """
-    response = client.get(f"/api/{resource_type}/{resource_id}/comments")
+    params: dict[str, str | int] = {
+        "pageNumber": page_number,
+        "numPerPage": num_per_page,
+    }
+    if text is not None:
+        params["text"] = text
+    if channel is not None:
+        params["channel"] = channel
+    response = client.get(f"/api/{resource_type}/{resource_id}/comments", params=params)
     return [Comment.model_validate(comment) for comment in unwrap(response)]
 
 

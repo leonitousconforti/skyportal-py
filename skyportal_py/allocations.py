@@ -77,6 +77,8 @@ def fetch_allocations(
     client: httpx.Client,
     *,
     instrument_id: int | None = None,
+    api_type: str | None = None,
+    api_implements: str | None = None,
 ) -> list[Allocation]:
     """Retrieve the allocations visible to the token.
 
@@ -86,14 +88,40 @@ def fetch_allocations(
         Client from :func:`skyportal_py.create_client`.
     instrument_id : int, optional
         Restrict to allocations on this instrument.
+    api_type : str, optional
+        Restrict to allocations whose instrument has the given API type
+        set: ``"api_classname"`` or ``"api_classname_obsplan"``.
+    api_implements : str, optional
+        Restrict to allocations whose instrument API implements this
+        method, e.g. ``"submit"`` or ``"retrieve"``. Requires
+        ``api_type``.
     """
-    params = {} if instrument_id is None else {"instrument_id": instrument_id}
+    params: dict[str, str | int] = {}
+    if instrument_id is not None:
+        params["instrument_id"] = instrument_id
+    if api_type is not None:
+        params["apiType"] = api_type
+    if api_implements is not None:
+        params["apiImplements"] = api_implements
     response = client.get("/api/allocation", params=params)
     return [Allocation.model_validate(item) for item in unwrap(response)]
 
 
-def fetch_allocation(client: httpx.Client, allocation_id: int) -> Allocation:
+def fetch_allocation(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
+    client: httpx.Client,
+    allocation_id: int,
+    *,
+    page_number: int = 1,
+    num_per_page: int = 50,
+    sort_by: str = "created_at",
+    sort_order: str = "asc",
+) -> Allocation:
     """Retrieve a single allocation by ID.
+
+    The response embeds the allocation's follow-up requests in
+    ``requests``; the pagination and sort parameters apply to that list.
+    (The wire response also carries the total request count in a
+    ``totalMatches`` sibling key, which this function drops.)
 
     Parameters
     ----------
@@ -101,8 +129,22 @@ def fetch_allocation(client: httpx.Client, allocation_id: int) -> Allocation:
         Client from :func:`skyportal_py.create_client`.
     allocation_id : int
         ID of the allocation.
+    page_number, num_per_page : int, optional
+        Pagination controls over ``requests``; the server caps the page
+        size.
+    sort_by : str, optional
+        Field to sort ``requests`` by; one of ``"created_at"``,
+        ``"modified"``, ``"status"`` or ``"obj"``.
+    sort_order : str, optional
+        ``"asc"`` or ``"desc"``.
     """
-    response = client.get(f"/api/allocation/{allocation_id}")
+    params: dict[str, str | int] = {
+        "pageNumber": page_number,
+        "numPerPage": num_per_page,
+        "sortBy": sort_by,
+        "sortOrder": sort_order,
+    }
+    response = client.get(f"/api/allocation/{allocation_id}", params=params)
     return Allocation.model_validate(unwrap(response)["allocation"])
 
 

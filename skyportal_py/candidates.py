@@ -185,6 +185,7 @@ def fetch_candidate(
     *,
     include_photometry: bool = False,
     include_spectra: bool = False,
+    include_alerts: bool = False,
 ) -> Candidate:
     """Retrieve a single candidate by object ID.
 
@@ -198,12 +199,16 @@ def fetch_candidate(
         Include the candidate's photometry in ``photometry``.
     include_spectra : bool, optional
         Include the candidate's spectra in ``spectra``.
+    include_alerts : bool, optional
+        Include the filters the candidate passed and the alerts behind
+        them, in ``filter_ids`` and ``passing_alerts``.
     """
     response = client.get(
         f"/api/candidates/{obj_id}",
         params={
             "includePhotometry": include_photometry,
             "includeSpectra": include_spectra,
+            "includeAlerts": include_alerts,
         },
     )
     return Candidate.model_validate(unwrap(response))
@@ -230,6 +235,7 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     page_number: int = 1,
     num_per_page: int = 25,
     group_ids: list[int] | None = None,
+    filter_ids: list[int] | None = None,
     saved_status: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
@@ -238,15 +244,30 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     include_photometry: bool = False,
     sort_by_annotation_origin: str | None = None,
     sort_by_annotation_key: str | None = None,
+    sort_by_annotation_order: str | None = None,
     annotation_filter_list: str | None = None,
     classifications: list[str] | None = None,
+    classifications_reject: list[str] | None = None,
     min_redshift: float | None = None,
     max_redshift: float | None = None,
+    list_name: str | None = None,
+    list_name_reject: str | None = None,
     query_id: str | None = None,
     photometry_annotations_filter: str | None = None,
     photometry_annotations_filter_origin: str | None = None,
     photometry_annotations_filter_before: str | None = None,
     photometry_annotations_filter_after: str | None = None,
+    photometry_annotations_filter_min_count: int | None = None,
+    first_detection_after: str | None = None,
+    last_detection_before: str | None = None,
+    number_detections: int | None = None,
+    require_detections: bool = True,
+    exclude_forced_photometry: bool = False,
+    localization_dateobs: str | None = None,
+    localization_name: str | None = None,
+    localization_cumprob: float | None = None,
+    autosave: bool = False,
+    autosave_group_ids: list[int] | None = None,
 ) -> CandidatesPage:
     """Query candidates, one page at a time.
 
@@ -258,6 +279,9 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
         Pagination controls.
     group_ids : list of int, optional
         Restrict to candidates passing filters belonging to these groups.
+    filter_ids : list of int, optional
+        Restrict to candidates passing these filters. Defaults to every
+        filter of the token's groups when ``group_ids`` is not given.
     saved_status : str, optional
         Filter on whether candidates are saved as sources, e.g. ``"all"``
         or ``"savedToAllSelected"``.
@@ -273,13 +297,24 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     sort_by_annotation_origin, sort_by_annotation_key : str, optional
         Sort the page by this annotation key from this origin; provide
         both together.
+    sort_by_annotation_order : str, optional
+        Direction of the annotation sort, ``"asc"`` (the server default)
+        or ``"desc"``.
     annotation_filter_list : str, optional
         JSON-encoded list of ``{"origin", "key", "min"/"max"/"value"}``
         annotation constraints, as the frontend scanner sends it.
     classifications : list of str, optional
         Keep candidates carrying one of these classifications.
+    classifications_reject : list of str, optional
+        Drop candidates carrying any of these classifications.
     min_redshift, max_redshift : float, optional
         Redshift range filter.
+    list_name : str, optional
+        Keep only candidates saved to this list of the querying user,
+        e.g. ``"favorites"``.
+    list_name_reject : str, optional
+        Drop candidates saved to this list of the querying user, e.g.
+        ``"rejected_candidates"``.
     query_id : str, optional
         Replay a previously cached query; the response's ``query_id``
         identifies the cache entry.
@@ -290,11 +325,41 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
         Comma-separated origins the photometry annotations must come from.
     photometry_annotations_filter_before, photometry_annotations_filter_after : str, optional
         ISO-format bounds on the photometry annotations' creation time.
+    photometry_annotations_filter_min_count : int, optional
+        Require at least this many photometry annotations passing the
+        photometry-annotation filters. Server default is 1.
+    first_detection_after, last_detection_before : str, optional
+        ISO-format (UTC) bounds on when the candidates were first/last
+        detected.
+    number_detections : int, optional
+        Keep only candidates detected at least this many times.
+    require_detections : bool, optional
+        Only apply the detection filters above, and require them to be set
+        when querying within a localization. Server default is true.
+    exclude_forced_photometry : bool, optional
+        Ignore forced photometry when applying the detection filters.
+    localization_dateobs : str, optional
+        Restrict to candidates inside a GCN localization, identified by
+        its event time in ISO format.
+    localization_name : str, optional
+        Name of the localization/skymap to use; defaults to the event's
+        most recent localization.
+    localization_cumprob : float, optional
+        Cumulative probability of the localization up to which to include
+        candidates. Server default is 0.95.
+    autosave : bool, optional
+        Save every candidate the query returns as a source.
+    autosave_group_ids : list of int, optional
+        Groups to save autosaved candidates to; defaults to all of the
+        token's groups.
     """
     optional = {
         "groupIDs": None
         if group_ids is None
         else ",".join(str(gid) for gid in group_ids),
+        "filterIDs": None
+        if filter_ids is None
+        else ",".join(str(fid) for fid in filter_ids),
         "savedStatus": saved_status,
         "startDate": start_date,
         "endDate": end_date,
@@ -302,22 +367,41 @@ def fetch_candidates(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
         "nameOnly": name_only,
         "sortByAnnotationOrigin": sort_by_annotation_origin,
         "sortByAnnotationKey": sort_by_annotation_key,
+        "sortByAnnotationOrder": sort_by_annotation_order,
         "annotationFilterList": annotation_filter_list,
         "classifications": None
         if classifications is None
         else ",".join(classifications),
+        "classificationsReject": None
+        if classifications_reject is None
+        else ",".join(classifications_reject),
         "minRedshift": min_redshift,
         "maxRedshift": max_redshift,
+        "listName": list_name,
+        "listNameReject": list_name_reject,
         "queryID": query_id,
         "photometryAnnotationsFilter": photometry_annotations_filter,
         "photometryAnnotationsFilterOrigin": photometry_annotations_filter_origin,
         "photometryAnnotationsFilterBefore": photometry_annotations_filter_before,
         "photometryAnnotationsFilterAfter": photometry_annotations_filter_after,
+        "photometryAnnotationsFilterMinCount": photometry_annotations_filter_min_count,
+        "firstDetectionAfter": first_detection_after,
+        "lastDetectionBefore": last_detection_before,
+        "numberDetections": number_detections,
+        "localizationDateobs": localization_dateobs,
+        "localizationName": localization_name,
+        "localizationCumprob": localization_cumprob,
+        "autosaveGroupIds": None
+        if autosave_group_ids is None
+        else ",".join(str(gid) for gid in autosave_group_ids),
     }
     params: dict[str, str | int | float | bool] = {
         "pageNumber": page_number,
         "numPerPage": num_per_page,
         "includePhotometry": include_photometry,
+        "requireDetections": require_detections,
+        "excludeForcedPhotometry": exclude_forced_photometry,
+        "autosave": autosave,
         **{key: value for key, value in optional.items() if value is not None},
     }
     response = client.get("/api/candidates", params=params)

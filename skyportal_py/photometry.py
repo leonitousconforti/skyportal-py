@@ -160,7 +160,13 @@ def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
     magsys: str = "ab",
     include_extinction: bool = False,
     include_validation_info: bool = False,
+    include_annotation_info: bool = False,
+    include_owner_info: bool = False,
+    include_stream_info: bool = False,
     include_super_objs_photometry: bool = False,
+    deduplicate_photometry: bool = False,
+    individual_or_series: str = "both",
+    phase_fold_data: bool = False,
 ) -> list[PhotometryPoint]:
     """Retrieve the photometry of a source.
 
@@ -179,9 +185,25 @@ def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
         measurement, in ``extinction`` and ``mag_corr``/``flux_corr``.
     include_validation_info : bool, optional
         Also return each point's validation records in ``validations``.
+    include_annotation_info : bool, optional
+        Also return each point's annotations in ``annotations``.
+    include_owner_info : bool, optional
+        Also return the point's uploading user in ``owner``.
+    include_stream_info : bool, optional
+        Also return the streams each point belongs to in ``streams``.
     include_super_objs_photometry : bool, optional
         Aggregate photometry from every object linked through the source's
         SuperObj.
+    deduplicate_photometry : bool, optional
+        Drop duplicate ``(mjd, filter)`` points, keeping the most recently
+        created one.
+    individual_or_series : str, optional
+        Return ``"individual"`` points, photometric ``"series"`` rows, or
+        ``"both"``.
+    phase_fold_data : bool, optional
+        Phase-fold the photometry on the object's most recent ``period``
+        annotation, in ``phase``. The server errors if the object has no
+        period annotation.
 
     Notes
     -----
@@ -195,7 +217,13 @@ def fetch_photometry(  # noqa: PLR0913 -- mirrors the endpoint's query parameter
             "magsys": magsys,
             "includeExtinction": include_extinction,
             "includeValidationInfo": include_validation_info,
+            "includeAnnotationInfo": include_annotation_info,
+            "includeOwnerInfo": include_owner_info,
+            "includeStreamInfo": include_stream_info,
             "includeSuperObjsPhotometry": include_super_objs_photometry,
+            "deduplicatePhotometry": deduplicate_photometry,
+            "individualOrSeries": individual_or_series,
+            "phaseFoldData": phase_fold_data,
         },
     )
     return [PhotometryPoint.model_validate(point) for point in unwrap(response)]

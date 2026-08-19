@@ -312,17 +312,26 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     client: httpx.Client,
     obj_id: str,
     *,
+    tns_name: str | None = None,
     include_thumbnails: bool = False,
     include_photometry: bool = False,
     include_color_magnitude: bool = False,
     include_photometry_exists: bool = False,
+    include_spectrum_exists: bool = False,
+    include_comment_exists: bool = False,
     include_detection_stats: bool = False,
     include_period_exists: bool = False,
     include_labellers: bool = False,
     include_gcn_crossmatches: bool = False,
+    include_gcn_notes: bool = False,
     include_analyses: bool = False,
     include_comments: bool = False,
+    include_candidates: bool = False,
+    include_tags: bool = True,
+    include_associated_objs: bool = True,
     include_super_objs: bool = False,
+    include_requested: bool = False,
+    pending_only: bool = False,
     deduplicate_photometry: bool = False,
 ) -> Source:
     """Retrieve a single source by object ID.
@@ -333,6 +342,9 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Client from :func:`skyportal_py.create_client`.
     obj_id : str
         Object ID of the source, e.g. ``"ZTF20abcdef"``.
+    tns_name : str, optional
+        Additionally require the source to carry this TNS name (with or
+        without the space, e.g. ``"2024 abc"``).
     include_thumbnails : bool, optional
         Include thumbnail data in the response.
     include_photometry : bool, optional
@@ -342,6 +354,10 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         ``color_magnitude``.
     include_photometry_exists : bool, optional
         Include whether any photometry exists, in ``photometry_exists``.
+    include_spectrum_exists : bool, optional
+        Include whether any spectrum exists, in ``spectrum_exists``.
+    include_comment_exists : bool, optional
+        Include whether any comment exists, in ``comment_exists``.
     include_detection_stats : bool, optional
         Include the aggregate photometry statistics in ``photstats``.
     include_period_exists : bool, optional
@@ -350,34 +366,56 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Include the users who labelled the source, in ``labellers``.
     include_gcn_crossmatches : bool, optional
         Include the source's GCN event crossmatches, in ``gcn_crossmatch``.
+    include_gcn_notes : bool, optional
+        Include the source's GCN vetting notes, in ``gcn_notes``.
     include_analyses : bool, optional
         Include the source's analyses in ``analyses``.
     include_comments : bool, optional
         Include the source's comments in ``comments``.
+    include_candidates : bool, optional
+        Include the source's filter passages in ``candidates``.
+    include_tags : bool, optional
+        Include the source's tags in ``tags``. Defaults to True, matching
+        the server.
+    include_associated_objs : bool, optional
+        Include the objects linked through a SuperObj in
+        ``associated_objs``. Defaults to True, matching the server.
     include_super_objs : bool, optional
         Aggregate data from every object linked through the source's
         SuperObj (see ``associated_objs``).
+    include_requested : bool, optional
+        Also include groups whose save is only requested, in ``groups``.
+    pending_only : bool, optional
+        Only include groups whose save is requested but not yet active.
     deduplicate_photometry : bool, optional
         With ``include_photometry``, drop photometry points duplicated
         within a short time window.
     """
-    response = client.get(
-        f"/api/sources/{obj_id}",
-        params={
-            "includeThumbnails": include_thumbnails,
-            "includePhotometry": include_photometry,
-            "includeColorMagnitude": include_color_magnitude,
-            "includePhotometryExists": include_photometry_exists,
-            "includeDetectionStats": include_detection_stats,
-            "includePeriodExists": include_period_exists,
-            "includeLabellers": include_labellers,
-            "includeGCNCrossmatches": include_gcn_crossmatches,
-            "includeAnalyses": include_analyses,
-            "includeComments": include_comments,
-            "includeSuperObjs": include_super_objs,
-            "deduplicatePhotometry": deduplicate_photometry,
-        },
-    )
+    params: dict[str, str | bool] = {
+        "includeThumbnails": include_thumbnails,
+        "includePhotometry": include_photometry,
+        "includeColorMagnitude": include_color_magnitude,
+        "includePhotometryExists": include_photometry_exists,
+        "includeSpectrumExists": include_spectrum_exists,
+        "includeCommentExists": include_comment_exists,
+        "includeDetectionStats": include_detection_stats,
+        "includePeriodExists": include_period_exists,
+        "includeLabellers": include_labellers,
+        "includeGCNCrossmatches": include_gcn_crossmatches,
+        "includeGCNNotes": include_gcn_notes,
+        "includeAnalyses": include_analyses,
+        "includeComments": include_comments,
+        "includeCandidates": include_candidates,
+        "includeTags": include_tags,
+        "includeAssociatedObjs": include_associated_objs,
+        "includeSuperObjs": include_super_objs,
+        "includeRequested": include_requested,
+        "pendingOnly": pending_only,
+        "deduplicatePhotometry": deduplicate_photometry,
+    }
+    if tns_name is not None:
+        params["TNSname"] = tns_name
+    response = client.get(f"/api/sources/{obj_id}", params=params)
     return Source.model_validate(unwrap(response))
 
 
@@ -411,21 +449,39 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     localization_dateobs: str | None = None,
     localization_name: str | None = None,
     localization_cumprob: float | None = None,
+    localization_reject_sources: bool | None = None,
+    include_sources_in_gcn: bool | None = None,
     remove_nested: bool | None = None,
+    list_name: str | None = None,
     saved_before: str | None = None,
     saved_after: str | None = None,
     saved_by_current_user: bool | None = None,
+    include_requested: bool | None = None,
+    pending_only: bool | None = None,
     created_or_modified_after: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    number_detections: int | None = None,
+    exclude_forced_photometry: bool | None = None,
+    require_detections: bool | None = None,
     has_spectrum: bool | None = None,
+    has_no_spectrum: bool | None = None,
     has_spectrum_before: str | None = None,
     has_spectrum_after: str | None = None,
     has_tns_name: bool | None = None,
+    has_no_tns_name: bool | None = None,
     has_followup_request: bool | None = None,
+    followup_request_status: str | None = None,
+    has_been_labelled: bool | None = None,
+    has_not_been_labelled: bool | None = None,
+    current_user_labeller: bool | None = None,
     simbad_class: str | None = None,
+    alias: str | None = None,
+    origin: str | None = None,
     classifications: list[str] | None = None,
+    classifications_simul: bool | None = None,
     nonclassifications: list[str] | None = None,
+    classified: bool | None = None,
     unclassified: bool | None = None,
     min_redshift: float | None = None,
     max_redshift: float | None = None,
@@ -435,10 +491,21 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     max_latest_magnitude: float | None = None,
     annotations_filter: str | None = None,
     annotations_filter_origin: str | None = None,
+    annotations_filter_before: str | None = None,
+    annotations_filter_after: str | None = None,
     comments_filter: str | None = None,
+    comments_filter_author: int | None = None,
+    comments_filter_before: str | None = None,
+    comments_filter_after: str | None = None,
     rejected_source_ids: list[str] | None = None,
+    include_hosts: bool | None = None,
+    include_spectrum_exists: bool | None = None,
+    include_comment_exists: bool | None = None,
+    include_geojson: bool | None = None,
     sort_by: str | None = None,
     sort_order: str | None = None,
+    use_cache: bool | None = None,
+    query_id: str | None = None,
 ) -> SourcesPage:
     """Query saved sources, one page at a time.
 
@@ -463,30 +530,74 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     localization_cumprob : float, optional
         Cumulative probability level of the localization region to keep
         sources within.
+    localization_reject_sources : bool, optional
+        Drop sources rejected against the localization's GCN event.
+    include_sources_in_gcn : bool, optional
+        Also keep sources already confirmed in the localization's GCN
+        event, even outside the probability region.
     remove_nested : bool, optional
         Strip the nested ``thumbnails``/``annotations``/``groups`` payloads
         from each source.
+    list_name : str, optional
+        Keep only sources on this list of the token's user, e.g.
+        ``"favorites"``.
     saved_before, saved_after : str, optional
         Keep sources saved in this ISO-format (UTC) time range.
     saved_by_current_user : bool, optional
         Keep only sources the token's user saved.
+    include_requested : bool, optional
+        Also keep sources whose group save is only requested.
+    pending_only : bool, optional
+        Keep only sources whose group save is requested but not active.
     created_or_modified_after : str, optional
         Keep sources created or modified after this ISO-format time.
     start_date, end_date : str, optional
         Keep sources last detected in this ISO-format time range.
+    number_detections : int, optional
+        Keep only sources with at least this many detections.
+    exclude_forced_photometry : bool, optional
+        Evaluate the detection-based filters against non-forced
+        photometry only.
+    require_detections : bool, optional
+        Apply the detection-based filters, and require ``start_date``,
+        ``end_date`` and ``number_detections`` when querying inside a
+        localization. Defaults to True server-side.
     has_spectrum : bool, optional
         Keep only sources with at least one spectrum.
+    has_no_spectrum : bool, optional
+        Keep only sources without any spectrum.
     has_spectrum_before, has_spectrum_after : str, optional
         Keep sources with a spectrum observed before/after this ISO time.
     has_tns_name : bool, optional
         Keep only sources with a TNS name.
+    has_no_tns_name : bool, optional
+        Keep only sources without a TNS name.
     has_followup_request : bool, optional
         Keep only sources with a follow-up request.
+    followup_request_status : str, optional
+        With ``has_followup_request``, partial-match filter on the
+        follow-up request status.
+    has_been_labelled : bool, optional
+        Keep only sources that have been labelled.
+    has_not_been_labelled : bool, optional
+        Keep only sources that have not been labelled.
+    current_user_labeller : bool, optional
+        With one of the labelling filters, consider only labels by the
+        token's user rather than by anyone.
     simbad_class : str, optional
         Keep sources with this Simbad class.
+    alias : str, optional
+        Keep sources whose alias contains this (partial-match) string.
+    origin : str, optional
+        Keep sources whose origin contains this (partial-match) string.
     classifications, nonclassifications : list of str, optional
         Keep sources carrying / not carrying one of these
         ``"taxonomy: classification"`` strings.
+    classifications_simul : bool, optional
+        Require every entry of ``classifications`` to match (AND rather
+        than OR).
+    classified : bool, optional
+        Keep only sources with at least one classification.
     unclassified : bool, optional
         Keep only sources without any classification.
     min_redshift, max_redshift : float, optional
@@ -499,13 +610,33 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Comma-separated ``key[:value:operator]`` annotation constraints.
     annotations_filter_origin : str, optional
         Comma-separated origins the annotations must come from.
+    annotations_filter_before, annotations_filter_after : str, optional
+        Keep sources with an annotation before/after this UTC datetime.
     comments_filter : str, optional
         Partial-match filter on comment text.
+    comments_filter_author : int, optional
+        User ID the filtered comments must be authored by.
+    comments_filter_before, comments_filter_after : str, optional
+        Keep sources with a comment before/after this UTC datetime.
     rejected_source_ids : list of str, optional
         Object IDs to exclude from the results.
+    include_hosts : bool, optional
+        Include each source's host galaxy in ``host``.
+    include_spectrum_exists : bool, optional
+        Include whether any spectrum exists, in ``spectrum_exists``.
+    include_comment_exists : bool, optional
+        Include whether any comment exists, in ``comment_exists``.
+    include_geojson : bool, optional
+        Include a GeoJSON representation of the page in ``geojson``.
     sort_by, sort_order : str, optional
         Sort column (a source column, ``"saved_at"``, ``"altdata.<key>"``
         or ``"annotation.<origin>.<key>"``) and direction ("asc"/"desc").
+    use_cache : bool, optional
+        Cache the matching IDs server-side: the first page returns a
+        ``query_id`` to pass back for later pages.
+    query_id : str, optional
+        With ``use_cache``, replay a cached query when fetching pages
+        after the first.
     """
     params: dict[str, str | int | float | bool] = {
         "pageNumber": page_number,
@@ -521,21 +652,39 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
             localization_dateobs=localization_dateobs,
             localization_name=localization_name,
             localization_cumprob=localization_cumprob,
+            localization_reject_sources=localization_reject_sources,
+            include_sources_in_gcn=include_sources_in_gcn,
             remove_nested=remove_nested,
+            list_name=list_name,
             saved_before=saved_before,
             saved_after=saved_after,
             saved_by_current_user=saved_by_current_user,
+            include_requested=include_requested,
+            pending_only=pending_only,
             created_or_modified_after=created_or_modified_after,
             start_date=start_date,
             end_date=end_date,
+            number_detections=number_detections,
+            exclude_forced_photometry=exclude_forced_photometry,
+            require_detections=require_detections,
             has_spectrum=has_spectrum,
+            has_no_spectrum=has_no_spectrum,
             has_spectrum_before=has_spectrum_before,
             has_spectrum_after=has_spectrum_after,
             has_tns_name=has_tns_name,
+            has_no_tns_name=has_no_tns_name,
             has_followup_request=has_followup_request,
+            followup_request_status=followup_request_status,
+            has_been_labelled=has_been_labelled,
+            has_not_been_labelled=has_not_been_labelled,
+            current_user_labeller=current_user_labeller,
             simbad_class=simbad_class,
+            alias=alias,
+            origin=origin,
             classifications=classifications,
+            classifications_simul=classifications_simul,
             nonclassifications=nonclassifications,
+            classified=classified,
             unclassified=unclassified,
             min_redshift=min_redshift,
             max_redshift=max_redshift,
@@ -545,10 +694,21 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
             max_latest_magnitude=max_latest_magnitude,
             annotations_filter=annotations_filter,
             annotations_filter_origin=annotations_filter_origin,
+            annotations_filter_before=annotations_filter_before,
+            annotations_filter_after=annotations_filter_after,
             comments_filter=comments_filter,
+            comments_filter_author=comments_filter_author,
+            comments_filter_before=comments_filter_before,
+            comments_filter_after=comments_filter_after,
             rejected_source_ids=rejected_source_ids,
+            include_hosts=include_hosts,
+            include_spectrum_exists=include_spectrum_exists,
+            include_comment_exists=include_comment_exists,
+            include_geojson=include_geojson,
             sort_by=sort_by,
             sort_order=sort_order,
+            use_cache=use_cache,
+            query_id=query_id,
         ),
     }
     response = client.get("/api/sources", params=params)
@@ -566,19 +726,38 @@ _SOURCES_FILTER_WIRE_NAMES = {
     "localization_dateobs": "localizationDateobs",
     "localization_name": "localizationName",
     "localization_cumprob": "localizationCumprob",
+    "localization_reject_sources": "localizationRejectSources",
+    "include_sources_in_gcn": "includeSourcesInGcn",
     "remove_nested": "removeNested",
+    "list_name": "listName",
     "saved_before": "savedBefore",
     "saved_after": "savedAfter",
     "saved_by_current_user": "savedByCurrentUser",
+    "include_requested": "includeRequested",
+    "pending_only": "pendingOnly",
     "created_or_modified_after": "createdOrModifiedAfter",
     "start_date": "startDate",
     "end_date": "endDate",
+    "number_detections": "numberDetections",
+    "exclude_forced_photometry": "excludeForcedPhotometry",
+    "require_detections": "requireDetections",
     "has_spectrum": "hasSpectrum",
+    "has_no_spectrum": "hasNoSpectrum",
     "has_spectrum_before": "hasSpectrumBefore",
     "has_spectrum_after": "hasSpectrumAfter",
     "has_tns_name": "hasTNSname",
+    "has_no_tns_name": "hasNoTNSname",
     "has_followup_request": "hasFollowupRequest",
+    "followup_request_status": "followupRequestStatus",
+    "has_been_labelled": "hasBeenLabelled",
+    "has_not_been_labelled": "hasNotBeenLabelled",
+    "current_user_labeller": "currentUserLabeller",
     "simbad_class": "simbadClass",
+    "alias": "alias",
+    "origin": "origin",
+    # The server reads this one in snake_case.
+    "classifications_simul": "classifications_simul",
+    "classified": "classified",
     "unclassified": "unclassified",
     "min_redshift": "minRedshift",
     "max_redshift": "maxRedshift",
@@ -588,9 +767,20 @@ _SOURCES_FILTER_WIRE_NAMES = {
     "max_latest_magnitude": "maxLatestMagnitude",
     "annotations_filter": "annotationsFilter",
     "annotations_filter_origin": "annotationsFilterOrigin",
+    "annotations_filter_before": "annotationsFilterBefore",
+    "annotations_filter_after": "annotationsFilterAfter",
     "comments_filter": "commentsFilter",
+    "comments_filter_author": "commentsFilterAuthor",
+    "comments_filter_before": "commentsFilterBefore",
+    "comments_filter_after": "commentsFilterAfter",
+    "include_hosts": "includeHosts",
+    "include_spectrum_exists": "includeSpectrumExists",
+    "include_comment_exists": "includeCommentExists",
+    "include_geojson": "includeGeoJSON",
     "sort_by": "sortBy",
     "sort_order": "sortOrder",
+    "use_cache": "useCache",
+    "query_id": "queryID",
 }
 
 
@@ -663,6 +853,8 @@ def fetch_sources_save_summary(  # noqa: PLR0913 -- mirrors the endpoint's query
     saved_after: str | None = None,
     sort_by: str | None = None,
     sort_order: str | None = None,
+    use_cache: bool | None = None,
+    query_id: str | None = None,
 ) -> SourcesSaveSummaryPage:
     """Query when and by whom sources were saved, one page at a time.
 
@@ -681,6 +873,12 @@ def fetch_sources_save_summary(  # noqa: PLR0913 -- mirrors the endpoint's query
         Keep sources saved in this ISO-format (UTC) time range.
     sort_by, sort_order : str, optional
         Sort column (e.g. ``"saved_at"``) and direction ("asc"/"desc").
+    use_cache : bool, optional
+        Cache the matching IDs server-side: the first page returns a
+        ``query_id`` to pass back for later pages.
+    query_id : str, optional
+        With ``use_cache``, replay a cached query when fetching pages
+        after the first.
     """
     params: dict[str, str | int | float | bool] = {
         "pageNumber": page_number,
@@ -692,6 +890,8 @@ def fetch_sources_save_summary(  # noqa: PLR0913 -- mirrors the endpoint's query
             saved_after=saved_after,
             sort_by=sort_by,
             sort_order=sort_order,
+            use_cache=use_cache,
+            query_id=query_id,
         ),
     }
     response = client.get("/api/sources", params=params)

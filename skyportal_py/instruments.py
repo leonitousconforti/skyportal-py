@@ -96,13 +96,18 @@ def fetch_instruments(
     return [Instrument.model_validate(item) for item in unwrap(response)]
 
 
-def fetch_instrument(
+def fetch_instrument(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     client: httpx.Client,
     instrument_id: int,
     *,
     include_geojson: bool = False,
     include_geojson_summary: bool = False,
     include_region: bool = False,
+    ignore_cache: bool = False,
+    localization_dateobs: str | None = None,
+    localization_name: str | None = None,
+    localization_cumprob: float | None = None,
+    airmass_time: str | None = None,
 ) -> Instrument:
     """Retrieve a single instrument by ID.
 
@@ -118,15 +123,38 @@ def fetch_instrument(
         Include each field's summary contour in ``fields[].contour_summary``.
     include_region : bool, optional
         Include the instrument's ds9 region string in ``region``.
+    ignore_cache : bool, optional
+        Recompute the localization's field overlap instead of using the
+        server's cached field list.
+    localization_dateobs : str, optional
+        Restrict the returned ``fields`` to those overlapping the
+        localization of the GCN event with this ``dateobs``, in ISO 8601
+        format (``YYYY-MM-DDTHH:MM:SS.sss``).
+    localization_name : str, optional
+        Name of the localization / skymap to use. Defaults to the event's
+        most recent localization.
+    localization_cumprob : float, optional
+        Cumulative probability up to which to include fields. Server
+        default is 0.95.
+    airmass_time : str, optional
+        Time to use for each field's airmass calculation, in ISO 8601
+        format. Defaults to ``localization_dateobs``.
     """
-    response = client.get(
-        f"/api/instrument/{instrument_id}",
-        params={
-            "includeGeoJSON": include_geojson,
-            "includeGeoJSONSummary": include_geojson_summary,
-            "includeRegion": include_region,
-        },
-    )
+    params: dict[str, str | float | bool] = {
+        "includeGeoJSON": include_geojson,
+        "includeGeoJSONSummary": include_geojson_summary,
+        "includeRegion": include_region,
+        "ignoreCache": ignore_cache,
+    }
+    if localization_dateobs is not None:
+        params["localizationDateobs"] = localization_dateobs
+    if localization_name is not None:
+        params["localizationName"] = localization_name
+    if localization_cumprob is not None:
+        params["localizationCumprob"] = localization_cumprob
+    if airmass_time is not None:
+        params["airmassTime"] = airmass_time
+    response = client.get(f"/api/instrument/{instrument_id}", params=params)
     return Instrument.model_validate(unwrap(response))
 
 
