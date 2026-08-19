@@ -77,19 +77,33 @@ class Instrument(BaseModel):
     region_summary: str | None = None
 
 
-def fetch_instruments(client: httpx.Client) -> list[Instrument]:
-    """Retrieve all instruments visible to the token.
+def fetch_instruments(
+    client: httpx.Client,
+    *,
+    name: str | None = None,
+) -> list[Instrument]:
+    """Retrieve instruments, optionally filtered by exact name.
 
     Parameters
     ----------
     client : httpx.Client
         Client from :func:`skyportal_py.create_client`.
+    name : str, optional
+        Exact instrument name to match.
     """
-    response = client.get("/api/instrument")
+    params = {} if name is None else {"name": name}
+    response = client.get("/api/instrument", params=params)
     return [Instrument.model_validate(item) for item in unwrap(response)]
 
 
-def fetch_instrument(client: httpx.Client, instrument_id: int) -> Instrument:
+def fetch_instrument(
+    client: httpx.Client,
+    instrument_id: int,
+    *,
+    include_geojson: bool = False,
+    include_geojson_summary: bool = False,
+    include_region: bool = False,
+) -> Instrument:
     """Retrieve a single instrument by ID.
 
     Parameters
@@ -98,8 +112,21 @@ def fetch_instrument(client: httpx.Client, instrument_id: int) -> Instrument:
         Client from :func:`skyportal_py.create_client`.
     instrument_id : int
         ID of the instrument.
+    include_geojson : bool, optional
+        Include each field's GeoJSON contour in ``fields[].contour``.
+    include_geojson_summary : bool, optional
+        Include each field's summary contour in ``fields[].contour_summary``.
+    include_region : bool, optional
+        Include the instrument's ds9 region string in ``region``.
     """
-    response = client.get(f"/api/instrument/{instrument_id}")
+    response = client.get(
+        f"/api/instrument/{instrument_id}",
+        params={
+            "includeGeoJSON": include_geojson,
+            "includeGeoJSONSummary": include_geojson_summary,
+            "includeRegion": include_region,
+        },
+    )
     return Instrument.model_validate(unwrap(response))
 
 

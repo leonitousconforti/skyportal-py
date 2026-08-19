@@ -81,8 +81,13 @@ class ProfilePatch(BaseModel):
     preferences: dict[str, Any] | None = None
 
 
-def update_profile(client: httpx.Client, payload: ProfilePatch) -> None:
-    """Update the profile of the user associated with the token.
+def update_profile(
+    client: httpx.Client,
+    payload: ProfilePatch,
+    *,
+    user_id: int | None = None,
+) -> None:
+    """Update a user's profile and preferences.
 
     Only the provided fields are sent; omitted fields are left unchanged.
     ``preferences`` is merged into the stored preferences dict rather than
@@ -94,10 +99,13 @@ def update_profile(client: httpx.Client, payload: ProfilePatch) -> None:
         Client from :func:`skyportal_py.create_client`.
     payload : ProfilePatch
         The fields to change.
+    user_id : int, optional
+        User whose profile to update; defaults to the token's own user.
+        Updating another user requires the "Manage users" ACL.
     """
-    unwrap(
-        client.patch(
-            "/api/internal/profile",
-            json=payload.model_dump(exclude_none=True),
-        )
+    path = (
+        "/api/internal/profile"
+        if user_id is None
+        else f"/api/internal/profile/{user_id}"
     )
+    unwrap(client.patch(path, json=payload.model_dump(exclude_none=True)))

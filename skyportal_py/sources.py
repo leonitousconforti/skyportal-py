@@ -320,6 +320,7 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     include_period_exists: bool = False,
     include_labellers: bool = False,
     include_gcn_crossmatches: bool = False,
+    include_analyses: bool = False,
     deduplicate_photometry: bool = False,
 ) -> Source:
     """Retrieve a single source by object ID.
@@ -347,6 +348,8 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
         Include the users who labelled the source, in ``labellers``.
     include_gcn_crossmatches : bool, optional
         Include the source's GCN event crossmatches, in ``gcn_crossmatch``.
+    include_analyses : bool, optional
+        Include the source's analyses in ``analyses``.
     deduplicate_photometry : bool, optional
         With ``include_photometry``, drop photometry points duplicated
         within a short time window.
@@ -362,6 +365,7 @@ def fetch_source(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
             "includePeriodExists": include_period_exists,
             "includeLabellers": include_labellers,
             "includeGCNCrossmatches": include_gcn_crossmatches,
+            "includeAnalyses": include_analyses,
             "deduplicatePhotometry": deduplicate_photometry,
         },
     )
@@ -395,6 +399,9 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     group_ids: list[int] | None = None,
     spatial_catalog_name: str | None = None,
     spatial_catalog_entry_name: str | None = None,
+    localization_dateobs: str | None = None,
+    localization_name: str | None = None,
+    localization_cumprob: float | None = None,
     remove_nested: bool | None = None,
     saved_before: str | None = None,
     saved_after: str | None = None,
@@ -441,6 +448,12 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
     spatial_catalog_name, spatial_catalog_entry_name : str, optional
         Keep sources inside this entry of this spatial catalog; provide
         both together.
+    localization_dateobs, localization_name : str, optional
+        Keep sources inside a GCN localization, identified by its event
+        time and map name.
+    localization_cumprob : float, optional
+        Cumulative probability level of the localization region to keep
+        sources within.
     remove_nested : bool, optional
         Strip the nested ``thumbnails``/``annotations``/``groups`` payloads
         from each source.
@@ -496,6 +509,9 @@ def fetch_sources(  # noqa: PLR0913 -- mirrors the endpoint's query parameters
             group_ids=group_ids,
             spatial_catalog_name=spatial_catalog_name,
             spatial_catalog_entry_name=spatial_catalog_entry_name,
+            localization_dateobs=localization_dateobs,
+            localization_name=localization_name,
+            localization_cumprob=localization_cumprob,
             remove_nested=remove_nested,
             saved_before=saved_before,
             saved_after=saved_after,
@@ -538,6 +554,9 @@ _SOURCES_FILTER_WIRE_NAMES = {
     "radius": "radius",
     "spatial_catalog_name": "spatialCatalogName",
     "spatial_catalog_entry_name": "spatialCatalogEntryName",
+    "localization_dateobs": "localizationDateobs",
+    "localization_name": "localizationName",
+    "localization_cumprob": "localizationCumprob",
     "remove_nested": "removeNested",
     "saved_before": "savedBefore",
     "saved_after": "savedAfter",
@@ -697,6 +716,7 @@ def update_source(  # noqa: PLR0913 -- mirrors the endpoint's body parameters
     transient: bool | None = None,
     ra_dis: float | None = None,
     altdata: dict[str, Any] | None = None,
+    summary: str | None = None,
 ) -> None:
     """Update fields of an existing source.
 
@@ -716,6 +736,8 @@ def update_source(  # noqa: PLR0913 -- mirrors the endpoint's body parameters
         Whether the source is an astrophysical transient.
     ra_dis, altdata : optional
         Discovery right ascension and misc. metadata stored as JSON.
+    summary : str, optional
+        New human-readable summary of the source.
     """
     fields = {
         "ra": ra,
@@ -724,6 +746,7 @@ def update_source(  # noqa: PLR0913 -- mirrors the endpoint's body parameters
         "transient": transient,
         "ra_dis": ra_dis,
         "altdata": altdata,
+        "summary": summary,
     }
     payload = {name: value for name, value in fields.items() if value is not None}
     unwrap(client.patch(f"/api/sources/{obj_id}", json=payload))
