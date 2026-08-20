@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
 import httpx
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from skyportal_py._http import unwrap
 
@@ -13,8 +14,8 @@ from skyportal_py._http import unwrap
 class ApiToken(BaseModel):
     """An API token (upstream baselayer ``Token``).
 
-    The token's ACLs are not serialized; they appear only on the profile's
-    token listing (``UserProfile.tokens``).
+    ``acls`` are the full ACL rows and ``created_by`` the owner's
+    ``User.to_dict()``, both eager-loaded by the token endpoints.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -23,7 +24,9 @@ class ApiToken(BaseModel):
     created_at: datetime.datetime | None = None
     modified: datetime.datetime | None = None
     created_by_id: int | None = None
+    created_by: dict[str, Any] | None = None
     name: str | None = None
+    acls: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TokenPostResponse(BaseModel):

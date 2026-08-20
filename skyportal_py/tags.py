@@ -66,6 +66,7 @@ class ObjTagPostResponse(BaseModel):
     obj_id: str | None = None
     objtagoption_id: int | None = None
     author_id: int | None = None
+    groups: list[dict[str, Any]] | None = None
     message: str | None = None
 
 

@@ -141,6 +141,7 @@ class FollowupRequestPostResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: int
+    request_status: str | None = None
 
 
 def fetch_followup_request(

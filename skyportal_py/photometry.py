@@ -58,7 +58,9 @@ class _SerializedPhotometry(BaseModel):
     instrument_id: int | None = None
     instrument_name: str | None = None
     origin: str | None = None
-    altdata: dict[str, Any] | None = None
+    # The duplicate-resolution upload path can leave the literal string
+    # "NaN" in place of a point's altdata dict.
+    altdata: dict[str, Any] | str | None = None
     created_at: datetime | None = None
     groups: list[Group] = Field(default_factory=list)
     annotations: list[AnnotationDetail] = Field(default_factory=list)
