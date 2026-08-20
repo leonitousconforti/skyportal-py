@@ -32,6 +32,7 @@ class Comment(BaseModel):
     modified: datetime | None = None
     text: str | None = None
     channel: str | None = None
+    system: bool | None = None
     attachment_name: str | None = None
     attachment_bytes: Any = None
     origin: str | None = None
