@@ -2,6 +2,14 @@
 
 <!-- towncrier release notes start -->
 
+## 0.3.3 (2026-08-20)
+
+### Bug fixes
+
+- `Comment` gains `system`, the flag SkyPortal sets on comments the app posts
+  itself rather than ones typed by their author. ([#13](https://github.com/leonitousconforti/skyportal-py/pull/13))
+
+
 ## 0.3.2 (2026-08-20)
 
 No significant changes.
