@@ -6,7 +6,7 @@ import datetime
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from skyportal_py._http import unwrap
 
@@ -95,6 +95,19 @@ class GalaxyCatalogPost(BaseModel):
     catalog_data: dict[str, list[Any]]
     catalog_description: str | None = None
     catalog_url: str | None = None
+
+    @field_validator("catalog_data")
+    @classmethod
+    def _decode_bytes(cls, value: dict[str, list[Any]]) -> dict[str, list[Any]]:
+        # HDF5-read tables carry numpy bytes in string columns, which the
+        # JSON encoder rejects; decode them the way simplejson used to.
+        return {
+            column: [
+                entry.decode() if isinstance(entry, bytes | bytearray) else entry
+                for entry in entries
+            ]
+            for column, entries in value.items()
+        }
 
 
 class GalaxyCatalogASCIIPost(BaseModel):
