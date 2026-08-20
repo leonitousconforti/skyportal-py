@@ -2,6 +2,20 @@
 
 <!-- towncrier release notes start -->
 
+## 0.3.1 (2026-08-20)
+
+### Bug fixes
+
+- Fix response models against what the server actually sends, caught by the
+  first full CI run of SkyPortal's dogfooded API test suite:
+  `FollowupRequestPostResponse` gains `request_status`, `Comment` gains
+  `channel`, `ObjTagPostResponse` gains `groups`, `ApiToken` gains the
+  eager-loaded `acls` and `created_by`, and a photometry point's `altdata`
+  may be the literal string `"NaN"` after a duplicate-resolving upload.
+  `GalaxyCatalogPost` now decodes bytes entries in `catalog_data` (as
+  HDF5-read astropy tables produce), which the JSON encoder used to reject. ([#12](https://github.com/leonitousconforti/skyportal-py/pull/12))
+
+
 ## 0.3.0 (2026-08-19)
 
 ### New features
