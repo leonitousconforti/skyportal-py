@@ -2,6 +2,11 @@
 
 <!-- towncrier release notes start -->
 
+## 0.3.2 (2026-08-20)
+
+No significant changes.
+
+
 ## 0.3.1 (2026-08-20)
 
 ### Bug fixes
